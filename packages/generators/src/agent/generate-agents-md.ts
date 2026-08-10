@@ -6,12 +6,22 @@ import {
   renderTestingRequirements,
 } from "../shared-fragments";
 
-function renderAgentsMd(blueprint: ProjectBlueprint): string {
+/**
+ * Renders the shared instructions body used by both the generic AGENTS.md
+ * (heading "AGENTS.md") and agent-specific files like Claude's CLAUDE.md
+ * (heading "CLAUDE.md") — the substantive content is identical across
+ * agents; only the heading (and therefore the file's own name) differs, so
+ * only that is parameterized rather than duplicating the whole function.
+ */
+export function renderAgentInstructions(
+  blueprint: ProjectBlueprint,
+  heading: string,
+): string {
   const { project, architecture, stack, testing, security } = blueprint;
   const architectureDisplayName =
     ARCHITECTURE_STYLE_DISPLAY_NAMES[architecture.style];
 
-  return `# AGENTS.md
+  return `# ${heading}
 
 Instructions for AI coding agents working in this project.
 
@@ -60,7 +70,7 @@ export function generateAgentsMd(blueprint: ProjectBlueprint): GeneratedFile[] {
   return [
     {
       path: "AGENTS.md",
-      content: renderAgentsMd(blueprint),
+      content: renderAgentInstructions(blueprint, "AGENTS.md"),
     },
   ];
 }

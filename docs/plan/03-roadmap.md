@@ -117,10 +117,33 @@ same files out (golden-tested, see `06-testing-strategy.md`).
 `skills/`, `workflows/`. The `main`/`phase-2/project-md-generator` branch divergence
 flagged earlier is resolved — both are merged together here.
 
-## Phase 3 — Agent Adapters — **not started**
+## Phase 3 — Agent Adapters — **in progress**
 
 Implement one adapter first (recommend `ClaudeAdapter`, since this repo is developed
 with Claude Code), then Cursor, then Codex. Do not implement all three at once.
+
+- [x] `AgentAdapter` interface (`packages/agents/src/agent-adapter.ts`) — declares
+      only `id` and `generateInstructions` for now, matching the `AIProvider`
+      precedent (`packages/ai/src/provider.ts`): `generateSkills`/`generateRules`/
+      `validate` from spec §21's full interface aren't declared yet since their
+      shapes aren't grounded in anything built (no `ValidationResult` type, no
+      defined meaning of "rules" per agent).
+- [x] `ClaudeAdapter.generateInstructions` (`packages/agents/src/claude/`) — produces
+      `CLAUDE.md`, the file Claude Code actually discovers at the workspace root
+      (not the agent-agnostic `AGENTS.md`). Reuses
+      `renderAgentInstructions(blueprint, heading)` — extracted from
+      `generate-agents-md.ts` (heading parameterized so `CLAUDE.md` doesn't
+      literally open with the text "# AGENTS.md"; `AGENTS.md`'s own output verified
+      unchanged) — so the substantive content stays DRY across the generic and
+      Claude-specific instruction files.
+- [ ] `ClaudeAdapter.generateSkills` — relocate/adapt `packages/generators`'
+      canonical `skills/*/SKILL.md` into `.claude/skills/*/SKILL.md`
+- [ ] `ClaudeAdapter.generateRules` — meaning not yet defined for Claude specifically
+      (Claude Code has no distinct rules-file concept the way Cursor's
+      `.cursorrules` does); needs its own scoping pass
+- [ ] `ClaudeAdapter.validate` — needs a `ValidationResult` shape design first
+- [ ] `CursorAdapter`, `CodexAdapter` — after `ClaudeAdapter` is more complete, one
+      at a time
 
 ## Phase 4 — AI Blueprint Generation — **not started**
 
