@@ -1,6 +1,7 @@
 import type {
   ArchitectureStyle,
   ProjectBlueprint,
+  Testing,
 } from "@ai-software-zoll/blueprint";
 
 /**
@@ -26,3 +27,22 @@ export const ARCHITECTURE_STYLE_DISPLAY_NAMES: Record<ArchitectureStyle, string>
   hexagonal: "Hexagonal Architecture",
   "domain-driven-design": "Domain-Driven Design",
 };
+
+/**
+ * Directive sentence describing which test types are required, derived from
+ * the Blueprint's testing flags. Shared by generate-agents-md.ts and
+ * generate-skills.ts's testing skill — both need the same "what's actually
+ * required" statement, phrased for an AI agent to act on.
+ */
+export function renderTestingRequirements(testing: Testing): string {
+  const required: string[] = [];
+  if (testing.unit) required.push("unit tests");
+  if (testing.integration) required.push("integration tests");
+  if (testing.e2e) required.push("end-to-end (e2e) tests");
+
+  if (required.length === 0) {
+    return "No specific testing requirements are configured yet.";
+  }
+
+  return `New functionality must include ${required.join(", ")}.`;
+}

@@ -75,13 +75,26 @@ same files out (golden-tested, see `06-testing-strategy.md`).
       `generateArchitectureMd` (`packages/generators/src/shared-fragments.ts`).
       `generateWorkspace` now returns `["PROJECT.md", "README.md", "ARCHITECTURE.md",
       "AGENTS.md"]`.
-- [ ] `docs/` generator
-- [ ] `skills/` generator (product-generated skills for end users' projects, per
-      spec §20 — distinct from this repo's own `.claude/skills/`)
+- [ ] `docs/` generator — implemented on `main` (`225f5c2`), not on this branch yet.
+      **Branch note:** `main` has `docs/` but not `AGENTS.md`; this branch
+      (`phase-2/project-md-generator`) has `AGENTS.md` but not `docs/`. Both touched
+      `generate-workspace.ts`/`index.ts`/this checklist independently — expect small,
+      mechanical merge conflicts (each just adds a line to a shared array/export
+      list/checklist) when these branches are reconciled. Worth merging soon before
+      more generators pile up on either side.
+- [x] `generateSkills` — `skills/` generator (`packages/generators/src/skills/`, a
+      new category not in the original 3-category assumption). Product-generated
+      skills for end users' projects (spec §20 — distinct from this repo's own
+      `.claude/skills/`), **conditionally generated**: `SkillDefinition.shouldInclude`
+      decides per-Blueprint whether each skill applies, so `generateSkills` can
+      legitimately return `[]` (proven for `minimalBlueprint`). Currently covers only
+      `testing` (1 of 3 planned: `authentication`, `database`, `api-development` are
+      deliberate follow-ups). `payments`/`deployment` from spec's example list are
+      intentionally not planned — nothing in the current Blueprint schema maps to
+      them without fragile text-matching heuristics. Shares `renderTestingRequirements`
+      with `generateAgentsMd` (`packages/generators/src/shared-fragments.ts`).
 - [ ] `workflows/` generator
 - [ ] `packages/templates` populated once ≥2 generators need shared fragments
-- [ ] `generateWorkspace()` aggregator combining all generators into the full
-      generated workspace
 
 ## Phase 3 — Agent Adapters — **not started**
 

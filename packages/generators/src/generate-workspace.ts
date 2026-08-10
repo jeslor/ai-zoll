@@ -4,17 +4,21 @@ import { generateProjectMd } from "./project/generate-project-md";
 import { generateReadmeMd } from "./project/generate-readme-md";
 import { generateArchitectureMd } from "./documentation/generate-architecture-md";
 import { generateAgentsMd } from "./agent/generate-agents-md";
+import { generateSkills } from "./skills/generate-skills";
 
 /**
  * Every generator that contributes to the generated workspace. A plain
  * array, not a registry — add a new generator here as it's built (Rule 1:
- * no plugin abstraction for generators that don't exist yet).
+ * no plugin abstraction for generators that don't exist yet). Some
+ * generators (generateSkills) may contribute zero files for a given
+ * Blueprint — that's expected, not an error.
  */
 const GENERATORS: Array<(blueprint: ProjectBlueprint) => GeneratedFile[]> = [
   generateProjectMd,
   generateReadmeMd,
   generateArchitectureMd,
   generateAgentsMd,
+  generateSkills,
 ];
 
 /**
