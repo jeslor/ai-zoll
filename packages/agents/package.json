@@ -1,0 +1,13 @@
+{
+  "name": "@ai-software-zoll/agents",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AgentAdapter implementations: claude, cursor, codex, copilot.",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "echo \"[agents] not implemented yet\"",
+    "lint": "echo \"[agents] not implemented yet\"",
+    "test": "echo \"[agents] not implemented yet\"",
+    "typecheck": "echo \"[agents] not implemented yet\""
+  }
+}

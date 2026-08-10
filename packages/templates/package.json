@@ -1,0 +1,13 @@
+{
+  "name": "@ai-software-zoll/templates",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Raw templates consumed by packages/generators and packages/agents.",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "echo \"[templates] not implemented yet\"",
+    "lint": "echo \"[templates] not implemented yet\"",
+    "test": "echo \"[templates] not implemented yet\"",
+    "typecheck": "echo \"[templates] not implemented yet\""
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@ai-software-zoll/analyzer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Deterministic repository analyzers for the existing-project workflow.",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "echo \"[analyzer] not implemented yet\"",
+    "lint": "echo \"[analyzer] not implemented yet\"",
+    "test": "echo \"[analyzer] not implemented yet\"",
+    "typecheck": "echo \"[analyzer] not implemented yet\""
+  }
+}

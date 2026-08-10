@@ -1,0 +1,13 @@
+{
+  "name": "@ai-software-zoll/api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "NestJS REST API for AI Software Zoll.",
+  "scripts": {
+    "build": "echo \"[api] no app scaffolded yet\"",
+    "dev": "echo \"[api] no app scaffolded yet\"",
+    "lint": "echo \"[api] no app scaffolded yet\"",
+    "test": "echo \"[api] no app scaffolded yet\"",
+    "typecheck": "echo \"[api] no app scaffolded yet\""
+  }
+}

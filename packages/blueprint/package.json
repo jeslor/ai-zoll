@@ -1,0 +1,13 @@
+{
+  "name": "@ai-software-zoll/blueprint",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Canonical Project Blueprint: Zod schemas, types, and validation.",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "echo \"[blueprint] not implemented yet\"",
+    "lint": "echo \"[blueprint] not implemented yet\"",
+    "test": "echo \"[blueprint] not implemented yet\"",
+    "typecheck": "echo \"[blueprint] not implemented yet\""
+  }
+}

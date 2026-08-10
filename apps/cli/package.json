@@ -1,0 +1,16 @@
+{
+  "name": "ai-software-zoll",
+  "version": "0.0.0",
+  "private": true,
+  "description": "CLI for AI Software Zoll (npx ai-software-zoll ...).",
+  "bin": {
+    "ai-software-zoll": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "echo \"[cli] no app scaffolded yet\"",
+    "dev": "echo \"[cli] no app scaffolded yet\"",
+    "lint": "echo \"[cli] no app scaffolded yet\"",
+    "test": "echo \"[cli] no app scaffolded yet\"",
+    "typecheck": "echo \"[cli] no app scaffolded yet\""
+  }
+}

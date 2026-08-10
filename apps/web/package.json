@@ -1,0 +1,13 @@
+{
+  "name": "@ai-software-zoll/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Next.js dashboard for AI Software Zoll.",
+  "scripts": {
+    "build": "echo \"[web] no app scaffolded yet\"",
+    "dev": "echo \"[web] no app scaffolded yet\"",
+    "lint": "echo \"[web] no app scaffolded yet\"",
+    "test": "echo \"[web] no app scaffolded yet\"",
+    "typecheck": "echo \"[web] no app scaffolded yet\""
+  }
+}
