@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generateProjectMd } from "../generate-project-md";
-import { fullBlueprint } from "./fixtures/full-blueprint";
-import { minimalBlueprint } from "./fixtures/minimal-blueprint";
+import { fullBlueprint } from "../../__fixtures__/full-blueprint";
+import { minimalBlueprint } from "../../__fixtures__/minimal-blueprint";
 
 describe("generateProjectMd", () => {
   it("returns a single PROJECT.md file", () => {
