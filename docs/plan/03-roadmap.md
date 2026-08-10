@@ -147,11 +147,25 @@ with Claude Code), then Cursor, then Codex. Do not implement all three at once.
       agent-agnostic. Throws loudly (not silently) if a future skill id has no
       frontmatter mapping yet, rather than emitting an undiscoverable skill file.
 - [ ] `ClaudeAdapter.generateRules` — meaning not yet defined for Claude specifically
-      (Claude Code has no distinct rules-file concept the way Cursor's
-      `.cursorrules` does); needs its own scoping pass
+      (Claude Code has no distinct rules-file concept the way Cursor's `.cursor/rules/`
+      does); needs its own scoping pass
 - [ ] `ClaudeAdapter.validate` — needs a `ValidationResult` shape design first
-- [ ] `CursorAdapter`, `CodexAdapter` — after `ClaudeAdapter` is more complete, one
-      at a time
+- [x] `CursorAdapter.generateInstructions`/`.generateSkills`
+      (`packages/agents/src/cursor/`) — researched Cursor's actual current (2026)
+      convention rather than guessing: `.cursor/rules/*.mdc`, YAML frontmatter
+      (`description`/`globs`/`alwaysApply`), **`.mdc` extension load-bearing** (a
+      plain `.md` file there is silently ignored by Cursor's rules system). Sources:
+      [Cursor Docs — Rules](https://cursor.com/docs/rules),
+      [Cursor Rules Best Practices (Morph)](https://www.morphllm.com/cursor-rules-best-practices).
+      `generateInstructions` → one always-applied `.cursor/rules/project.mdc`
+      (reuses `renderAgentInstructions`, same as Claude); `generateSkills` → one
+      `.mdc` per canonical skill, `alwaysApply: false`, scoped via `globs`
+      (Cursor's "Auto Attached" rules are its closest analog to a contextual skill).
+      Same local frontmatter-map + throw-on-unmapped-id pattern as `ClaudeAdapter`.
+      Splitting `generateInstructions` into multiple concern-scoped files (Cursor's
+      own best-practice recommendation) is a deliberate future enhancement, not done
+      here.
+- [ ] `CodexAdapter` — next agent, one at a time
 
 ## Phase 4 — AI Blueprint Generation — **not started**
 
