@@ -62,6 +62,11 @@ same files out (golden-tested, see `06-testing-strategy.md`).
       architecture style heading + explanation (spec §7) + stack layout. Blueprint
       test fixtures promoted to `packages/generators/src/__fixtures__/`, shared across
       all generator categories.
+- [x] `generateWorkspace()` aggregator (`packages/generators/src/generate-workspace.ts`)
+      — combines every generator's output into the full file list, with
+      `assertNoDuplicatePaths` as a real safety check, not a formality. Currently
+      combines the 3 generators above; grows by one line as each new generator below
+      is added.
 - [ ] `AGENTS.md` generator (agent-agnostic instructions file — not to be confused
       with `packages/agents`' per-agent adapters, Phase 3)
 - [ ] `docs/` generator
