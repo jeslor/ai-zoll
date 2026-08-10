@@ -64,22 +64,44 @@ same files out (golden-tested, see `06-testing-strategy.md`).
       all generator categories.
 - [x] `generateWorkspace()` aggregator (`packages/generators/src/generate-workspace.ts`)
       — combines every generator's output into the full file list, with
-      `assertNoDuplicatePaths` as a real safety check, not a formality. Currently
-      combines the 3 generators above; grows by one line as each new generator below
-      is added.
-- [ ] `AGENTS.md` generator (agent-agnostic instructions file — not to be confused
-      with `packages/agents`' per-agent adapters, Phase 3) — implemented on
-      `phase-2/project-md-generator` (`ea081f7`), not yet merged into `main`
+      `assertNoDuplicatePaths` as a real safety check, not a formality. Now combines
+      6 generators (`generateProjectMd`, `generateReadmeMd`, `generateArchitectureMd`,
+      `generateDocs`, `generateAgentsMd`, `generateSkills`); for `fullBlueprint` that's
+      8 files (`PROJECT.md`, `README.md`, `ARCHITECTURE.md`, `docs/architecture/
+      README.md`, `docs/development/README.md`, `docs/decisions/README.md`,
+      `AGENTS.md`, `skills/testing/SKILL.md`). Grows by one line as each new generator
+      below is added — this is the single source of truth for the current file count;
+      individual generator bullets below don't repeat it.
 - [x] `generateDocs` — `docs/` generator (`packages/generators/src/documentation/`):
       scaffolds `docs/architecture/`, `docs/development/`, `docs/decisions/` with a
       stub `README.md` each, not fabricated deep content — the current Blueprint
       schema doesn't carry spec §8's richer development-standards fields yet, so
-      there's no data to generate real content from. `generateWorkspace` now returns
-      6 files.
-- [ ] `skills/` generator (product-generated skills for end users' projects, per
-      spec §20 — distinct from this repo's own `.claude/skills/`)
-- [ ] `workflows/` generator
-- [ ] `packages/templates` populated once ≥2 generators need shared fragments
+      there's no data to generate real content from.
+- [x] `generateAgentsMd` — `AGENTS.md` generator (`packages/generators/src/agent/`,
+      the first content in that category — agent-agnostic instructions file, not to
+      be confused with `packages/agents`' per-agent adapters, Phase 3). Prescriptive,
+      not descriptive: stack/testing/security phrased as directives, not a repeated
+      data table. Shares `ARCHITECTURE_STYLE_DISPLAY_NAMES` with
+      `generateArchitectureMd` (`packages/generators/src/shared-fragments.ts`).
+- [x] `generateSkills` — `skills/` generator (`packages/generators/src/skills/`, a
+      new category not in the original 3-category assumption). Product-generated
+      skills for end users' projects (spec §20 — distinct from this repo's own
+      `.claude/skills/`), **conditionally generated**: `SkillDefinition.shouldInclude`
+      decides per-Blueprint whether each skill applies, so `generateSkills` can
+      legitimately return `[]` (proven for `minimalBlueprint`). Currently covers only
+      `testing` (1 of 3 planned: `authentication`, `database`, `api-development` are
+      deliberate follow-ups). `payments`/`deployment` from spec's example list are
+      intentionally not planned — nothing in the current Blueprint schema maps to
+      them without fragile text-matching heuristics. Shares `renderTestingRequirements`
+      with `generateAgentsMd` (`packages/generators/src/shared-fragments.ts`).
+- [ ] `workflows/` generator — implemented on `phase-2/project-md-generator`
+      (`6ba5852`), not yet merged/pushed into `main`. Same always-generate pattern as
+      `generateDocs`; ships one workflow, `feature-development`.
+- [ ] `packages/templates` — likely won't need populating at all: every reusable
+      fragment so far (footer, architecture display names, testing requirements) fit
+      in `packages/generators/src/shared-fragments.ts` once a second consumer
+      appeared. Revisit only if a future generator needs template content that
+      pattern doesn't fit.
 
 ## Phase 3 — Agent Adapters — **not started**
 
