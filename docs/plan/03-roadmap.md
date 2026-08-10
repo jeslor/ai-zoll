@@ -67,8 +67,14 @@ same files out (golden-tested, see `06-testing-strategy.md`).
       `assertNoDuplicatePaths` as a real safety check, not a formality. Currently
       combines the 3 generators above; grows by one line as each new generator below
       is added.
-- [ ] `AGENTS.md` generator (agent-agnostic instructions file — not to be confused
-      with `packages/agents`' per-agent adapters, Phase 3)
+- [x] `generateAgentsMd` — `AGENTS.md` generator (`packages/generators/src/agent/`,
+      the first content in that category — agent-agnostic instructions file, not to
+      be confused with `packages/agents`' per-agent adapters, Phase 3). Prescriptive,
+      not descriptive: stack/testing/security phrased as directives, not a repeated
+      data table. Shares `ARCHITECTURE_STYLE_DISPLAY_NAMES` with
+      `generateArchitectureMd` (`packages/generators/src/shared-fragments.ts`).
+      `generateWorkspace` now returns `["PROJECT.md", "README.md", "ARCHITECTURE.md",
+      "AGENTS.md"]`.
 - [ ] `docs/` generator
 - [ ] `skills/` generator (product-generated skills for end users' projects, per
       spec §20 — distinct from this repo's own `.claude/skills/`)

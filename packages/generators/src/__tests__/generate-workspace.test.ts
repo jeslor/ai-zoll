@@ -6,6 +6,7 @@ import {
 import { generateProjectMd } from "../project/generate-project-md";
 import { generateReadmeMd } from "../project/generate-readme-md";
 import { generateArchitectureMd } from "../documentation/generate-architecture-md";
+import { generateAgentsMd } from "../agent/generate-agents-md";
 import { fullBlueprint } from "../__fixtures__/full-blueprint";
 
 describe("assertNoDuplicatePaths", () => {
@@ -39,6 +40,7 @@ describe("generateWorkspace", () => {
       "PROJECT.md",
       "README.md",
       "ARCHITECTURE.md",
+      "AGENTS.md",
     ]);
   });
 
@@ -56,6 +58,9 @@ describe("generateWorkspace", () => {
     );
     expect(byPath["ARCHITECTURE.md"]).toBe(
       generateArchitectureMd(fullBlueprint)[0]?.content,
+    );
+    expect(byPath["AGENTS.md"]).toBe(
+      generateAgentsMd(fullBlueprint)[0]?.content,
     );
   });
 
