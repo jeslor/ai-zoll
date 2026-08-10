@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "project": {
+    "name": "Bad Architecture Project",
+    "description": "Uses an architecture style that isn't in the enum.",
+    "type": "saas"
+  },
+  "architecture": { "style": "spaghetti" },
+  "stack": {
+    "frontend": "nextjs",
+    "backend": "nestjs",
+    "database": "postgresql",
+    "orm": "prisma"
+  },
+  "features": [],
+  "testing": { "unit": true, "integration": true, "e2e": true },
+  "security": { "authentication": "jwt", "authorization": "rbac" },
+  "agent": { "primary": "claude" }
+}

@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "project": {
+    "description": "Missing the required name field.",
+    "type": "saas"
+  },
+  "architecture": { "style": "modular" },
+  "stack": {
+    "frontend": "nextjs",
+    "backend": "nestjs",
+    "database": "postgresql",
+    "orm": "prisma"
+  },
+  "features": [],
+  "testing": { "unit": true, "integration": true, "e2e": true },
+  "security": { "authentication": "jwt", "authorization": "rbac" },
+  "agent": { "primary": "claude" }
+}

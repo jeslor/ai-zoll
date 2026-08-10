@@ -3,11 +3,20 @@
   "version": "0.0.0",
   "private": true,
   "description": "Canonical Project Blueprint: Zod schemas, types, and validation.",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "echo \"[blueprint] not implemented yet\"",
-    "lint": "echo \"[blueprint] not implemented yet\"",
-    "test": "echo \"[blueprint] not implemented yet\"",
-    "typecheck": "echo \"[blueprint] not implemented yet\""
+    "build": "tsc -p tsconfig.json",
+    "lint": "echo \"[blueprint] lint tooling pending (Phase 0)\"",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   }
 }

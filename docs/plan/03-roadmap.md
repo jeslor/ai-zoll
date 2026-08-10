@@ -24,11 +24,17 @@ Prisma, basic CI. No complex UI yet.
 - [ ] PostgreSQL + Prisma wired up (`prisma/schema.prisma`)
 - [ ] CI actually runs meaningful typecheck/lint/test (currently placeholder-safe)
 
-## Phase 1 — Blueprint Engine — **not started**
+## Phase 1 — Blueprint Engine — **in progress**
 
 `ProjectBlueprint`, `BlueprintSchema`, `BlueprintValidator`, `BlueprintVersion` in
 `packages/blueprint`. Build `Project → Blueprint` using a mock AI provider first — the
 system must work with zero external LLM dependency.
+
+- [x] `ProjectBlueprintSchema` (Zod) + inferred types + `safeParseBlueprint`/
+      `parseBlueprint` validation, with unit tests and fixtures covering the spec §4
+      example, a minimal blueprint, and invalid-input cases (`packages/blueprint`)
+- [ ] Mock `AIProvider` implementing `generateBlueprint` (`packages/ai`)
+- [ ] `Project → Blueprint` wiring exercised end-to-end using the mock provider
 
 ## Phase 2 — Deterministic Generator — **not started**
 

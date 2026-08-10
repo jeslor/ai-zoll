@@ -1,0 +1,19 @@
+{
+  "version": "2.0",
+  "project": {
+    "name": "Future Version Project",
+    "description": "Claims a schema version this package doesn't validate against.",
+    "type": "saas"
+  },
+  "architecture": { "style": "modular" },
+  "stack": {
+    "frontend": "nextjs",
+    "backend": "nestjs",
+    "database": "postgresql",
+    "orm": "prisma"
+  },
+  "features": [],
+  "testing": { "unit": true, "integration": true, "e2e": true },
+  "security": { "authentication": "jwt", "authorization": "rbac" },
+  "agent": { "primary": "claude" }
+}
