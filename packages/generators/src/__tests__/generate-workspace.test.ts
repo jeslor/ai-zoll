@@ -7,7 +7,9 @@ import { generateProjectMd } from "../project/generate-project-md";
 import { generateReadmeMd } from "../project/generate-readme-md";
 import { generateArchitectureMd } from "../documentation/generate-architecture-md";
 import { generateAgentsMd } from "../agent/generate-agents-md";
+import { generateSkills } from "../skills/generate-skills";
 import { fullBlueprint } from "../__fixtures__/full-blueprint";
+import { minimalBlueprint } from "../__fixtures__/minimal-blueprint";
 
 describe("assertNoDuplicatePaths", () => {
   it("does not throw when all paths are unique", () => {
@@ -41,7 +43,16 @@ describe("generateWorkspace", () => {
       "README.md",
       "ARCHITECTURE.md",
       "AGENTS.md",
+      "skills/testing/SKILL.md",
     ]);
+  });
+
+  it("omits skills/ entirely for a blueprint with no testing configured (minimal)", () => {
+    const files = generateWorkspace(minimalBlueprint);
+    const skillPaths = files
+      .map((file) => file.path)
+      .filter((path) => path.startsWith("skills/"));
+    expect(skillPaths).toEqual([]);
   });
 
   it("each file's content matches calling its generator directly (aggregation doesn't mutate anything)", () => {
@@ -61,6 +72,9 @@ describe("generateWorkspace", () => {
     );
     expect(byPath["AGENTS.md"]).toBe(
       generateAgentsMd(fullBlueprint)[0]?.content,
+    );
+    expect(byPath["skills/testing/SKILL.md"]).toBe(
+      generateSkills(fullBlueprint)[0]?.content,
     );
   });
 
