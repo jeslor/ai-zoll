@@ -41,12 +41,29 @@ system must work with zero external LLM dependency.
       CLI/API-level end-to-end wiring happens when `apps/cli`/`apps/api` are built
       (Phase 0 apps / Phase 5)
 
-## Phase 2 — Deterministic Generator — **not started**
+## Phase 2 — Deterministic Generator — **in progress**
 
 `Blueprint → Template Engine → Workspace` in `packages/generators` +
 `packages/templates`. Generates `README.md`, `PROJECT.md`, `ARCHITECTURE.md`,
 `AGENTS.md`, `docs/`, `skills/`, `workflows/`. Fully deterministic — same Blueprint in,
 same files out (golden-tested, see `06-testing-strategy.md`).
+
+- [x] Generator core: `GeneratedFile` type (`packages/shared`) shared with the future
+      `packages/agents` adapters; golden-test pattern via Vitest's
+      `toMatchFileSnapshot()` established
+- [x] `generateProjectMd` — `PROJECT.md` generator (`packages/generators`), golden
+      tests for a full and a minimal Blueprint
+- [ ] `README.md` generator
+- [ ] `ARCHITECTURE.md` generator
+- [ ] `AGENTS.md` generator (agent-agnostic instructions file — not to be confused
+      with `packages/agents`' per-agent adapters, Phase 3)
+- [ ] `docs/` generator
+- [ ] `skills/` generator (product-generated skills for end users' projects, per
+      spec §20 — distinct from this repo's own `.claude/skills/`)
+- [ ] `workflows/` generator
+- [ ] `packages/templates` populated once ≥2 generators need shared fragments
+- [ ] `generateWorkspace()` aggregator combining all generators into the full
+      generated workspace
 
 ## Phase 3 — Agent Adapters — **not started**
 

@@ -3,11 +3,21 @@
   "version": "0.0.0",
   "private": true,
   "description": "Deterministic template engine: Blueprint -> generated workspace files.",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "echo \"[generators] not implemented yet\"",
-    "lint": "echo \"[generators] not implemented yet\"",
-    "test": "echo \"[generators] not implemented yet\"",
-    "typecheck": "echo \"[generators] not implemented yet\""
+    "build": "tsc -p tsconfig.json",
+    "lint": "echo \"[generators] lint tooling pending (Phase 0)\"",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ai-software-zoll/blueprint": "workspace:^",
+    "@ai-software-zoll/shared": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   }
 }
