@@ -3,11 +3,20 @@
   "version": "0.0.0",
   "private": true,
   "description": "AIProvider abstraction: mock provider first, real provider later.",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "echo \"[ai] not implemented yet\"",
-    "lint": "echo \"[ai] not implemented yet\"",
-    "test": "echo \"[ai] not implemented yet\"",
-    "typecheck": "echo \"[ai] not implemented yet\""
+    "build": "tsc -p tsconfig.json",
+    "lint": "echo \"[ai] lint tooling pending (Phase 0)\"",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ai-software-zoll/blueprint": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   }
 }
