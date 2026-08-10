@@ -3,11 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "description": "Cross-cutting types and utilities with no framework dependency.",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "echo \"[shared] not implemented yet\"",
-    "lint": "echo \"[shared] not implemented yet\"",
-    "test": "echo \"[shared] not implemented yet\"",
-    "typecheck": "echo \"[shared] not implemented yet\""
+    "build": "tsc -p tsconfig.json",
+    "lint": "echo \"[shared] lint tooling pending (Phase 0)\"",
+    "test": "echo \"[shared] type-only package — no runtime tests yet\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2"
   }
 }
