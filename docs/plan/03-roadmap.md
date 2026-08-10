@@ -68,14 +68,18 @@ same files out (golden-tested, see `06-testing-strategy.md`).
       combines the 3 generators above; grows by one line as each new generator below
       is added.
 - [ ] `AGENTS.md` generator (agent-agnostic instructions file — not to be confused
-      with `packages/agents`' per-agent adapters, Phase 3)
-- [ ] `docs/` generator
+      with `packages/agents`' per-agent adapters, Phase 3) — implemented on
+      `phase-2/project-md-generator` (`ea081f7`), not yet merged into `main`
+- [x] `generateDocs` — `docs/` generator (`packages/generators/src/documentation/`):
+      scaffolds `docs/architecture/`, `docs/development/`, `docs/decisions/` with a
+      stub `README.md` each, not fabricated deep content — the current Blueprint
+      schema doesn't carry spec §8's richer development-standards fields yet, so
+      there's no data to generate real content from. `generateWorkspace` now returns
+      6 files.
 - [ ] `skills/` generator (product-generated skills for end users' projects, per
       spec §20 — distinct from this repo's own `.claude/skills/`)
 - [ ] `workflows/` generator
 - [ ] `packages/templates` populated once ≥2 generators need shared fragments
-- [ ] `generateWorkspace()` aggregator combining all generators into the full
-      generated workspace
 
 ## Phase 3 — Agent Adapters — **not started**
 

@@ -6,6 +6,7 @@ import {
 import { generateProjectMd } from "../project/generate-project-md";
 import { generateReadmeMd } from "../project/generate-readme-md";
 import { generateArchitectureMd } from "../documentation/generate-architecture-md";
+import { generateDocs } from "../documentation/generate-docs";
 import { fullBlueprint } from "../__fixtures__/full-blueprint";
 
 describe("assertNoDuplicatePaths", () => {
@@ -39,6 +40,9 @@ describe("generateWorkspace", () => {
       "PROJECT.md",
       "README.md",
       "ARCHITECTURE.md",
+      "docs/architecture/README.md",
+      "docs/development/README.md",
+      "docs/decisions/README.md",
     ]);
   });
 
@@ -57,6 +61,11 @@ describe("generateWorkspace", () => {
     expect(byPath["ARCHITECTURE.md"]).toBe(
       generateArchitectureMd(fullBlueprint)[0]?.content,
     );
+
+    const docsFiles = generateDocs(fullBlueprint);
+    for (const docFile of docsFiles) {
+      expect(byPath[docFile.path]).toBe(docFile.content);
+    }
   });
 
   it("is deterministic: the same blueprint always produces an identical file list", () => {
