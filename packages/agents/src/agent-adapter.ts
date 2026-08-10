@@ -2,13 +2,10 @@ import type { ProjectBlueprint } from "@ai-software-zoll/blueprint";
 import type { GeneratedFile } from "@ai-software-zoll/shared";
 
 /**
- * AgentAdapter abstraction (spec §21). Only `id` and `generateInstructions`
- * are declared here — Phase 3's initial scope. The full spec interface also
+ * AgentAdapter abstraction (spec §21). Only `id`, `generateInstructions`, and
+ * `generateSkills` are declared here so far. The full spec interface also
  * has:
  *
- *   generateSkills(blueprint): GeneratedFile[]    (relocates/adapts
- *     packages/generators' canonical skills into this agent's own
- *     convention, e.g. .claude/skills/* for Claude)
  *   generateRules(blueprint): GeneratedFile[]      (meaning is agent-specific
  *     and not yet defined for any agent — needs its own scoping pass)
  *   validate(blueprint): ValidationResult           (needs a ValidationResult
@@ -22,4 +19,10 @@ export interface AgentAdapter {
   /** Stable, lowercase identifier, e.g. "claude". */
   id: string;
   generateInstructions(blueprint: ProjectBlueprint): GeneratedFile[];
+  /**
+   * Relocates/adapts packages/generators' canonical, agent-agnostic skills
+   * into this agent's own convention (e.g. .claude/skills/* for Claude).
+   * May return zero files if the underlying canonical generator did.
+   */
+  generateSkills(blueprint: ProjectBlueprint): GeneratedFile[];
 }

@@ -123,11 +123,11 @@ Implement one adapter first (recommend `ClaudeAdapter`, since this repo is devel
 with Claude Code), then Cursor, then Codex. Do not implement all three at once.
 
 - [x] `AgentAdapter` interface (`packages/agents/src/agent-adapter.ts`) — declares
-      only `id` and `generateInstructions` for now, matching the `AIProvider`
-      precedent (`packages/ai/src/provider.ts`): `generateSkills`/`generateRules`/
-      `validate` from spec §21's full interface aren't declared yet since their
-      shapes aren't grounded in anything built (no `ValidationResult` type, no
-      defined meaning of "rules" per agent).
+      `id`, `generateInstructions`, `generateSkills`. `generateRules`/`validate`
+      from spec §21's full interface aren't declared yet since their shapes aren't
+      grounded in anything built (no `ValidationResult` type, no defined meaning of
+      "rules" per agent) — matching the `AIProvider` precedent
+      (`packages/ai/src/provider.ts`).
 - [x] `ClaudeAdapter.generateInstructions` (`packages/agents/src/claude/`) — produces
       `CLAUDE.md`, the file Claude Code actually discovers at the workspace root
       (not the agent-agnostic `AGENTS.md`). Reuses
@@ -136,8 +136,16 @@ with Claude Code), then Cursor, then Codex. Do not implement all three at once.
       literally open with the text "# AGENTS.md"; `AGENTS.md`'s own output verified
       unchanged) — so the substantive content stays DRY across the generic and
       Claude-specific instruction files.
-- [ ] `ClaudeAdapter.generateSkills` — relocate/adapt `packages/generators`'
-      canonical `skills/*/SKILL.md` into `.claude/skills/*/SKILL.md`
+- [x] `ClaudeAdapter.generateSkills` (`packages/agents/src/claude/generate-claude-skills.ts`)
+      — calls `packages/generators`' `generateSkills` (same 0-N conditional behavior
+      flows through automatically) and transforms each result: relocates
+      `skills/<id>/SKILL.md` → `.claude/skills/<id>/SKILL.md` and prepends
+      Claude Code's actual discovery frontmatter (`name`/`description`), which the
+      canonical generator correctly doesn't include (frontmatter is Claude-specific,
+      Rule 8). The frontmatter-description map is local to `packages/agents`, not
+      added to `packages/generators`' `SkillDefinition` — keeps the generic layer
+      agent-agnostic. Throws loudly (not silently) if a future skill id has no
+      frontmatter mapping yet, rather than emitting an undiscoverable skill file.
 - [ ] `ClaudeAdapter.generateRules` — meaning not yet defined for Claude specifically
       (Claude Code has no distinct rules-file concept the way Cursor's
       `.cursorrules` does); needs its own scoping pass
