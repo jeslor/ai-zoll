@@ -41,7 +41,7 @@ system must work with zero external LLM dependency.
       CLI/API-level end-to-end wiring happens when `apps/cli`/`apps/api` are built
       (Phase 0 apps / Phase 5)
 
-## Phase 2 — Deterministic Generator — **in progress**
+## Phase 2 — Deterministic Generator — **done**
 
 `Blueprint → Template Engine → Workspace` in `packages/generators` +
 `packages/templates`. Generates `README.md`, `PROJECT.md`, `ARCHITECTURE.md`,
@@ -64,24 +64,27 @@ same files out (golden-tested, see `06-testing-strategy.md`).
       all generator categories.
 - [x] `generateWorkspace()` aggregator (`packages/generators/src/generate-workspace.ts`)
       — combines every generator's output into the full file list, with
-      `assertNoDuplicatePaths` as a real safety check, not a formality. Currently
-      combines the 3 generators above; grows by one line as each new generator below
-      is added.
+      `assertNoDuplicatePaths` as a real safety check, not a formality. Now combines
+      all 7 generators (`generateProjectMd`, `generateReadmeMd`,
+      `generateArchitectureMd`, `generateDocs`, `generateAgentsMd`, `generateSkills`,
+      `generateWorkflows`); for `fullBlueprint` that's 9 files (`PROJECT.md`,
+      `README.md`, `ARCHITECTURE.md`, `docs/architecture/README.md`,
+      `docs/development/README.md`, `docs/decisions/README.md`, `AGENTS.md`,
+      `skills/testing/SKILL.md`, `workflows/feature-development.md`); for
+      `minimalBlueprint` that's 8 (no `skills/` — no testing configured). This is the
+      single source of truth for the current file count; individual generator bullets
+      below don't repeat it.
+- [x] `generateDocs` — `docs/` generator (`packages/generators/src/documentation/`):
+      scaffolds `docs/architecture/`, `docs/development/`, `docs/decisions/` with a
+      stub `README.md` each, not fabricated deep content — the current Blueprint
+      schema doesn't carry spec §8's richer development-standards fields yet, so
+      there's no data to generate real content from.
 - [x] `generateAgentsMd` — `AGENTS.md` generator (`packages/generators/src/agent/`,
       the first content in that category — agent-agnostic instructions file, not to
       be confused with `packages/agents`' per-agent adapters, Phase 3). Prescriptive,
       not descriptive: stack/testing/security phrased as directives, not a repeated
       data table. Shares `ARCHITECTURE_STYLE_DISPLAY_NAMES` with
       `generateArchitectureMd` (`packages/generators/src/shared-fragments.ts`).
-      `generateWorkspace` now returns `["PROJECT.md", "README.md", "ARCHITECTURE.md",
-      "AGENTS.md"]`.
-- [ ] `docs/` generator — implemented on `main` (`225f5c2`), not on this branch yet.
-      **Branch note:** `main` has `docs/` but not `AGENTS.md`; this branch
-      (`phase-2/project-md-generator`) has `AGENTS.md` but not `docs/`. Both touched
-      `generate-workspace.ts`/`index.ts`/this checklist independently — expect small,
-      mechanical merge conflicts (each just adds a line to a shared array/export
-      list/checklist) when these branches are reconciled. Worth merging soon before
-      more generators pile up on either side.
 - [x] `generateSkills` — `skills/` generator (`packages/generators/src/skills/`, a
       new category not in the original 3-category assumption). Product-generated
       skills for end users' projects (spec §20 — distinct from this repo's own
@@ -93,13 +96,54 @@ same files out (golden-tested, see `06-testing-strategy.md`).
       intentionally not planned — nothing in the current Blueprint schema maps to
       them without fragile text-matching heuristics. Shares `renderTestingRequirements`
       with `generateAgentsMd` (`packages/generators/src/shared-fragments.ts`).
-- [ ] `workflows/` generator
-- [ ] `packages/templates` populated once ≥2 generators need shared fragments
+- [x] `generateWorkflows` — `workflows/` generator (`packages/generators/src/workflows/`,
+      a new category). Development process guides for an AI agent to follow (e.g.
+      "adding a feature") — distinct from `AGENTS.md` (project-wide directives) and
+      `skills/` (domain-area knowledge). Fixed set, not conditional (every project
+      needs a feature-development process, unlike auth/database/testing skills) — same
+      always-generate array pattern as `generate-docs.ts`. Currently covers only
+      `feature-development` (1 planned; bug-fix/code-review are deliberate
+      follow-ups). Reuses `ARCHITECTURE_STYLE_DISPLAY_NAMES`/`renderFooter`, no new
+      promotion needed.
+- [x] `packages/templates` — deliberately stays empty. Every reusable fragment found
+      so far (footer, architecture display names, testing requirements) was small
+      enough to live in `packages/generators/src/shared-fragments.ts` once a second
+      consumer appeared; a separate template package was never actually needed. Not a
+      gap — revisit only if a future generator needs genuinely large/complex template
+      content this pattern doesn't fit.
 
-## Phase 3 — Agent Adapters — **not started**
+**Every originally-listed Phase 2 checklist item is done**: generator core,
+`PROJECT.md`, `README.md`, `ARCHITECTURE.md`, aggregator, `docs/`, `AGENTS.md`,
+`skills/`, `workflows/`. The `main`/`phase-2/project-md-generator` branch divergence
+flagged earlier is resolved — both are merged together here.
+
+## Phase 3 — Agent Adapters — **in progress**
 
 Implement one adapter first (recommend `ClaudeAdapter`, since this repo is developed
 with Claude Code), then Cursor, then Codex. Do not implement all three at once.
+
+- [x] `AgentAdapter` interface (`packages/agents/src/agent-adapter.ts`) — declares
+      only `id` and `generateInstructions` for now, matching the `AIProvider`
+      precedent (`packages/ai/src/provider.ts`): `generateSkills`/`generateRules`/
+      `validate` from spec §21's full interface aren't declared yet since their
+      shapes aren't grounded in anything built (no `ValidationResult` type, no
+      defined meaning of "rules" per agent).
+- [x] `ClaudeAdapter.generateInstructions` (`packages/agents/src/claude/`) — produces
+      `CLAUDE.md`, the file Claude Code actually discovers at the workspace root
+      (not the agent-agnostic `AGENTS.md`). Reuses
+      `renderAgentInstructions(blueprint, heading)` — extracted from
+      `generate-agents-md.ts` (heading parameterized so `CLAUDE.md` doesn't
+      literally open with the text "# AGENTS.md"; `AGENTS.md`'s own output verified
+      unchanged) — so the substantive content stays DRY across the generic and
+      Claude-specific instruction files.
+- [ ] `ClaudeAdapter.generateSkills` — relocate/adapt `packages/generators`'
+      canonical `skills/*/SKILL.md` into `.claude/skills/*/SKILL.md`
+- [ ] `ClaudeAdapter.generateRules` — meaning not yet defined for Claude specifically
+      (Claude Code has no distinct rules-file concept the way Cursor's
+      `.cursorrules` does); needs its own scoping pass
+- [ ] `ClaudeAdapter.validate` — needs a `ValidationResult` shape design first
+- [ ] `CursorAdapter`, `CodexAdapter` — after `ClaudeAdapter` is more complete, one
+      at a time
 
 ## Phase 4 — AI Blueprint Generation — **not started**
 

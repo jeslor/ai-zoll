@@ -6,8 +6,10 @@ import {
 import { generateProjectMd } from "../project/generate-project-md";
 import { generateReadmeMd } from "../project/generate-readme-md";
 import { generateArchitectureMd } from "../documentation/generate-architecture-md";
+import { generateDocs } from "../documentation/generate-docs";
 import { generateAgentsMd } from "../agent/generate-agents-md";
 import { generateSkills } from "../skills/generate-skills";
+import { generateWorkflows } from "../workflows/generate-workflows";
 import { fullBlueprint } from "../__fixtures__/full-blueprint";
 import { minimalBlueprint } from "../__fixtures__/minimal-blueprint";
 
@@ -42,8 +44,12 @@ describe("generateWorkspace", () => {
       "PROJECT.md",
       "README.md",
       "ARCHITECTURE.md",
+      "docs/architecture/README.md",
+      "docs/development/README.md",
+      "docs/decisions/README.md",
       "AGENTS.md",
       "skills/testing/SKILL.md",
+      "workflows/feature-development.md",
     ]);
   });
 
@@ -70,11 +76,20 @@ describe("generateWorkspace", () => {
     expect(byPath["ARCHITECTURE.md"]).toBe(
       generateArchitectureMd(fullBlueprint)[0]?.content,
     );
+
+    const docsFiles = generateDocs(fullBlueprint);
+    for (const docFile of docsFiles) {
+      expect(byPath[docFile.path]).toBe(docFile.content);
+    }
+
     expect(byPath["AGENTS.md"]).toBe(
       generateAgentsMd(fullBlueprint)[0]?.content,
     );
     expect(byPath["skills/testing/SKILL.md"]).toBe(
       generateSkills(fullBlueprint)[0]?.content,
+    );
+    expect(byPath["workflows/feature-development.md"]).toBe(
+      generateWorkflows(fullBlueprint)[0]?.content,
     );
   });
 
