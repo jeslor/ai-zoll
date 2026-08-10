@@ -8,6 +8,7 @@ import { generateReadmeMd } from "../project/generate-readme-md";
 import { generateArchitectureMd } from "../documentation/generate-architecture-md";
 import { generateAgentsMd } from "../agent/generate-agents-md";
 import { generateSkills } from "../skills/generate-skills";
+import { generateWorkflows } from "../workflows/generate-workflows";
 import { fullBlueprint } from "../__fixtures__/full-blueprint";
 import { minimalBlueprint } from "../__fixtures__/minimal-blueprint";
 
@@ -44,6 +45,7 @@ describe("generateWorkspace", () => {
       "ARCHITECTURE.md",
       "AGENTS.md",
       "skills/testing/SKILL.md",
+      "workflows/feature-development.md",
     ]);
   });
 
@@ -75,6 +77,9 @@ describe("generateWorkspace", () => {
     );
     expect(byPath["skills/testing/SKILL.md"]).toBe(
       generateSkills(fullBlueprint)[0]?.content,
+    );
+    expect(byPath["workflows/feature-development.md"]).toBe(
+      generateWorkflows(fullBlueprint)[0]?.content,
     );
   });
 

@@ -3,4 +3,5 @@ export { generateReadmeMd } from "./project/generate-readme-md";
 export { generateArchitectureMd } from "./documentation/generate-architecture-md";
 export { generateAgentsMd } from "./agent/generate-agents-md";
 export { generateSkills } from "./skills/generate-skills";
+export { generateWorkflows } from "./workflows/generate-workflows";
 export { generateWorkspace, assertNoDuplicatePaths } from "./generate-workspace";
