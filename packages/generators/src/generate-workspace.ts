@@ -3,6 +3,7 @@ import type { GeneratedFile } from "@ai-software-zoll/shared";
 import { generateProjectMd } from "./project/generate-project-md";
 import { generateReadmeMd } from "./project/generate-readme-md";
 import { generateArchitectureMd } from "./documentation/generate-architecture-md";
+import { generateAgentsMd } from "./agent/generate-agents-md";
 
 /**
  * Every generator that contributes to the generated workspace. A plain
@@ -13,6 +14,7 @@ const GENERATORS: Array<(blueprint: ProjectBlueprint) => GeneratedFile[]> = [
   generateProjectMd,
   generateReadmeMd,
   generateArchitectureMd,
+  generateAgentsMd,
 ];
 
 /**
