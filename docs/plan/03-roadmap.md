@@ -41,7 +41,7 @@ system must work with zero external LLM dependency.
       CLI/API-level end-to-end wiring happens when `apps/cli`/`apps/api` are built
       (Phase 0 apps / Phase 5)
 
-## Phase 2 — Deterministic Generator — **in progress**
+## Phase 2 — Deterministic Generator — **done**
 
 `Blueprint → Template Engine → Workspace` in `packages/generators` +
 `packages/templates`. Generates `README.md`, `PROJECT.md`, `ARCHITECTURE.md`,
@@ -65,13 +65,15 @@ same files out (golden-tested, see `06-testing-strategy.md`).
 - [x] `generateWorkspace()` aggregator (`packages/generators/src/generate-workspace.ts`)
       — combines every generator's output into the full file list, with
       `assertNoDuplicatePaths` as a real safety check, not a formality. Now combines
-      6 generators (`generateProjectMd`, `generateReadmeMd`, `generateArchitectureMd`,
-      `generateDocs`, `generateAgentsMd`, `generateSkills`); for `fullBlueprint` that's
-      8 files (`PROJECT.md`, `README.md`, `ARCHITECTURE.md`, `docs/architecture/
-      README.md`, `docs/development/README.md`, `docs/decisions/README.md`,
-      `AGENTS.md`, `skills/testing/SKILL.md`). Grows by one line as each new generator
-      below is added — this is the single source of truth for the current file count;
-      individual generator bullets below don't repeat it.
+      all 7 generators (`generateProjectMd`, `generateReadmeMd`,
+      `generateArchitectureMd`, `generateDocs`, `generateAgentsMd`, `generateSkills`,
+      `generateWorkflows`); for `fullBlueprint` that's 9 files (`PROJECT.md`,
+      `README.md`, `ARCHITECTURE.md`, `docs/architecture/README.md`,
+      `docs/development/README.md`, `docs/decisions/README.md`, `AGENTS.md`,
+      `skills/testing/SKILL.md`, `workflows/feature-development.md`); for
+      `minimalBlueprint` that's 8 (no `skills/` — no testing configured). This is the
+      single source of truth for the current file count; individual generator bullets
+      below don't repeat it.
 - [x] `generateDocs` — `docs/` generator (`packages/generators/src/documentation/`):
       scaffolds `docs/architecture/`, `docs/development/`, `docs/decisions/` with a
       stub `README.md` each, not fabricated deep content — the current Blueprint
@@ -94,14 +96,26 @@ same files out (golden-tested, see `06-testing-strategy.md`).
       intentionally not planned — nothing in the current Blueprint schema maps to
       them without fragile text-matching heuristics. Shares `renderTestingRequirements`
       with `generateAgentsMd` (`packages/generators/src/shared-fragments.ts`).
-- [ ] `workflows/` generator — implemented on `phase-2/project-md-generator`
-      (`6ba5852`), not yet merged/pushed into `main`. Same always-generate pattern as
-      `generateDocs`; ships one workflow, `feature-development`.
-- [ ] `packages/templates` — likely won't need populating at all: every reusable
-      fragment so far (footer, architecture display names, testing requirements) fit
-      in `packages/generators/src/shared-fragments.ts` once a second consumer
-      appeared. Revisit only if a future generator needs template content that
-      pattern doesn't fit.
+- [x] `generateWorkflows` — `workflows/` generator (`packages/generators/src/workflows/`,
+      a new category). Development process guides for an AI agent to follow (e.g.
+      "adding a feature") — distinct from `AGENTS.md` (project-wide directives) and
+      `skills/` (domain-area knowledge). Fixed set, not conditional (every project
+      needs a feature-development process, unlike auth/database/testing skills) — same
+      always-generate array pattern as `generate-docs.ts`. Currently covers only
+      `feature-development` (1 planned; bug-fix/code-review are deliberate
+      follow-ups). Reuses `ARCHITECTURE_STYLE_DISPLAY_NAMES`/`renderFooter`, no new
+      promotion needed.
+- [x] `packages/templates` — deliberately stays empty. Every reusable fragment found
+      so far (footer, architecture display names, testing requirements) was small
+      enough to live in `packages/generators/src/shared-fragments.ts` once a second
+      consumer appeared; a separate template package was never actually needed. Not a
+      gap — revisit only if a future generator needs genuinely large/complex template
+      content this pattern doesn't fit.
+
+**Every originally-listed Phase 2 checklist item is done**: generator core,
+`PROJECT.md`, `README.md`, `ARCHITECTURE.md`, aggregator, `docs/`, `AGENTS.md`,
+`skills/`, `workflows/`. The `main`/`phase-2/project-md-generator` branch divergence
+flagged earlier is resolved — both are merged together here.
 
 ## Phase 3 — Agent Adapters — **not started**
 

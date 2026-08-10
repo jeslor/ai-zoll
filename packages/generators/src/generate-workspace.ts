@@ -6,6 +6,7 @@ import { generateArchitectureMd } from "./documentation/generate-architecture-md
 import { generateDocs } from "./documentation/generate-docs";
 import { generateAgentsMd } from "./agent/generate-agents-md";
 import { generateSkills } from "./skills/generate-skills";
+import { generateWorkflows } from "./workflows/generate-workflows";
 
 /**
  * Every generator that contributes to the generated workspace. A plain
@@ -21,6 +22,7 @@ const GENERATORS: Array<(blueprint: ProjectBlueprint) => GeneratedFile[]> = [
   generateDocs,
   generateAgentsMd,
   generateSkills,
+  generateWorkflows,
 ];
 
 /**
