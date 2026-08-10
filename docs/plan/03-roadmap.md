@@ -53,7 +53,10 @@ same files out (golden-tested, see `06-testing-strategy.md`).
       `toMatchFileSnapshot()` established
 - [x] `generateProjectMd` — `PROJECT.md` generator (`packages/generators`), golden
       tests for a full and a minimal Blueprint
-- [ ] `README.md` generator
+- [x] `generateReadmeMd` — `README.md` generator: lean "front door" (name,
+      description, stack summary, documentation index) that deliberately doesn't
+      repeat `PROJECT.md`'s detailed fields; shares a `renderFooter` helper with
+      `generateProjectMd` (`packages/generators/src/shared-fragments.ts`)
 - [ ] `ARCHITECTURE.md` generator
 - [ ] `AGENTS.md` generator (agent-agnostic instructions file — not to be confused
       with `packages/agents`' per-agent adapters, Phase 3)
