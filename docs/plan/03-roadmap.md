@@ -19,11 +19,38 @@ Prisma, basic CI. No complex UI yet.
 - [x] Documented monorepo skeleton created (this bootstrap pass — folders + placeholder
       `package.json` per package, no framework deps, no business logic)
 - [ ] Real `apps/web` Next.js app scaffolded
-- [ ] Real `apps/api` NestJS app scaffolded
+- [x] Real `apps/api` NestJS app scaffolded, with its first real vertical slice:
+      `POST/GET /projects`, `GET /projects/:id`, `POST/GET /projects/:id/blueprint`
+      (hand-written, no `@nestjs/cli` — plain `tsc` build matching every other
+      package). Blueprint writes are re-validated server-side via the canonical
+      `safeParseBlueprint` from `@ai-software-zoll/blueprint` (Rule 9/ADR 0002),
+      not a redefined DTO — every request body is Zod-validated (a small
+      hand-written `ZodValidationPipe`, no `class-validator`). Every write creates
+      an append-only `BlueprintVersion` row (spec §26) and upserts the
+      `ProjectBlueprint` "current" pointer. `/generate`, `/generated-files`,
+      `/analysis`, `/cli/auth`, `/cli/projects/:id/download` are explicitly
+      deferred (their own future units — need `packages/analyzer`, a real auth
+      strategy, and/or the generation pipeline wired in). Tested with service-level
+      unit tests (fake Prisma) plus an in-memory HTTP e2e suite
+      (`@nestjs/testing` + `supertest`, fake Prisma, no real DB needed for
+      `pnpm test`) — 18 tests total, all offline. Verified for real: ran
+      `prisma migrate dev` against a live Neon Postgres database and exercised
+      every endpoint (including the 400/404 error paths) with real HTTP requests,
+      confirming genuine round-trips through Postgres.
 - [x] Real `apps/cli` scaffolded — see "Phase 5 — CLI" below for the `init` command
       itself; this checklist item is just the app scaffolding (real `tsc` build,
       executable `dist/index.js` with shebang, real `vitest` tests).
-- [ ] PostgreSQL + Prisma wired up (`prisma/schema.prisma`)
+- [x] PostgreSQL + Prisma wired up (`prisma/schema.prisma`) — all 6 minimal-model
+      tables (`User, Project, ProjectBlueprint, BlueprintVersion, Agent,
+      GeneratedArtifact`; `Organization`/`Repository`/`DriftReport` etc. still
+      explicitly deferred per spec §31). Prisma 7 removed `datasource.url` from
+      the schema file — connection setup now lives in `apps/api/prisma.config.ts`
+      (CLI/Migrate) and a `@prisma/adapter-pg` driver adapter in `PrismaService`
+      (runtime), both reading `DATABASE_URL` from `apps/api/.env`. See
+      `prisma/README.md` for the monorepo-specific resolution notes (why
+      `prisma`/`@prisma/client` are also listed in the repo root's
+      `package.json`, and why the client generates into `apps/api/generated/`
+      instead of `node_modules/@prisma/client`).
 - [ ] CI actually runs meaningful typecheck/lint/test (currently placeholder-safe)
 
 ## Phase 1 — Blueprint Engine — **done**

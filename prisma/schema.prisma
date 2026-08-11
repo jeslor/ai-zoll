@@ -1,0 +1,93 @@
+// Minimal starting schema per docs/PRODUCT_SPEC.md §31 / docs/plan/04-database-and-api.md.
+// "Do not prematurely create dozens of tables" — Organization/Repository/DriftReport
+// etc. are explicitly deferred to Phase 10+.
+
+// Generated straight into apps/api (not resolved as @prisma/client from
+// node_modules) — schema.prisma lives at the repo root under pnpm's strict
+// workspace isolation, where @prisma/client isn't resolvable; apps/api is
+// the only consumer, so it generates directly there instead.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../apps/api/generated/prisma"
+}
+
+// Prisma 7: the datasource `url` no longer lives here — the connection string
+// is supplied via apps/api/prisma.config.ts (CLI/Migrate) and a driver adapter
+// in PrismaService (runtime client). See https://pris.ly/d/config-datasource.
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+}
+
+/// Project.userId is nullable for now — no auth/login flow exists yet
+/// (POST /cli/auth is a future unit). Tighten to required once it does.
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  currentBlueprint  ProjectBlueprint?
+  blueprintVersions BlueprintVersion[]
+  agent             Agent?
+  generatedArtifacts GeneratedArtifact[]
+}
+
+/// The current/latest blueprint for a project (1:1). Mirrors the most recent
+/// BlueprintVersion row — see apps/api's BlueprintsService for the write path.
+model ProjectBlueprint {
+  id        String   @id @default(cuid())
+  projectId String   @unique
+  project   Project  @relation(fields: [projectId], references: [id])
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Append-only history of every blueprint ever written for a project
+/// (spec §26 — "Project Blueprint / v1 / v2 / v3"), enabling future `sync`.
+model BlueprintVersion {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id])
+  versionNumber Int
+  data          Json
+  createdAt     DateTime @default(now())
+
+  @@unique([projectId, versionNumber])
+}
+
+/// A project's configured primary agent. Kept as its own table (spec §31
+/// lists it as a top-level entity) rather than a plain column on Project —
+/// forward-compatible with spec §9's future multi-agent support.
+model Agent {
+  id        String   @id @default(cuid())
+  projectId String   @unique
+  project   Project  @relation(fields: [projectId], references: [id])
+  primary   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// A single generated workspace file for a project. No writer exists yet in
+/// this unit (POST /projects/:id/generate is a future unit) — the table
+/// exists now per spec §31's literal minimal-schema list.
+model GeneratedArtifact {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  path      String
+  content   String
+  createdAt DateTime @default(now())
+}

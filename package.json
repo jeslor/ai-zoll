@@ -8,6 +8,10 @@
     "node": ">=20"
   },
   "packageManager": "pnpm@9.0.0",
+  "devDependencies": {
+    "@prisma/client": "^7.9.1",
+    "prisma": "^7.9.1"
+  },
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
