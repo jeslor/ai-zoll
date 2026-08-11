@@ -38,6 +38,7 @@ pnpm-debug.log*
 
 # Prisma
 prisma/*.db
+apps/api/generated/
 
 # Misc
 *.local
