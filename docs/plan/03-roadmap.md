@@ -205,11 +205,42 @@ with Claude Code), then Cursor, then Codex. Do not implement all three at once.
 All three initial adapters (`ClaudeAdapter`/`CursorAdapter`/`CodexAdapter`) now
 implement the complete spec §21 `AgentAdapter` interface.
 
-## Phase 4 — AI Blueprint Generation — **not started**
+## Phase 4 — AI Blueprint Generation — **done**
 
-Connect a real `AIProvider`. Input: project description + user selections. Output: a
-*validated* `ProjectBlueprint` — never trust raw AI text directly; validate, and
-retry/repair on failure.
+Connected a real `AIProvider`: `ClaudeAIProvider` (`packages/ai/src/providers/
+claude-ai-provider.ts`), built on the official `@anthropic-ai/sdk` and Claude's
+Structured Outputs (`messages.parse()` + `output_config.format`, schema reused
+directly from `ProjectBlueprintSchema.omit({ version: true })` — no hand-duplicated
+JSON Schema).
+
+- Per ADR 0004, the model only does real interpretive work on `features` and light
+  polish on `project.description` — every other field (`project.name`/`type`,
+  `architecture`, `stack`, `testing`, `security`, `agent`) is the user's explicit
+  selection and is enforced from the original input in **code**
+  (`ClaudeAIProvider.mergeCandidate`), not merely requested via the system prompt.
+- Every candidate — first attempt and one bounded repair attempt — is validated
+  through the same `safeParseBlueprint`/`BlueprintValidationError` pipeline
+  `MockAIProvider` already established (Rule 9: never let an LLM response bypass
+  schema validation). On a validation failure, one repair request is sent containing
+  the invalid candidate and the exact issues; if that also fails,
+  `BlueprintValidationError` is thrown with the latest issues. Two Claude calls max.
+- Model: `claude-opus-4-8`, `thinking: {type: "adaptive"}`,
+  `output_config.effort: "medium"` (deliberately below the `high` default — spec §34
+  AI Cost Control, since this is a small structured-extraction-plus-light-reasoning
+  task).
+- No API-key handling code in the package — `new Anthropic()` resolves
+  `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN`/an `ant auth login` profile on its own.
+- Fully offline test suite (`packages/ai/src/__tests__/claude-ai-provider.test.ts`,
+  11 tests total in the package): the Anthropic client is injected via the
+  constructor and tests use a minimal fake (`{ messages: { parse: vi.fn() } }`) — no
+  real network calls, no `ANTHROPIC_API_KEY` needed to run `pnpm test`.
+- Wired into the CLI: `apps/cli/src/select-ai-provider.ts` picks `ClaudeAIProvider`
+  when `ANTHROPIC_API_KEY` is set, else falls back to `MockAIProvider` with a stderr
+  notice — `run-init.ts` no longer hardcodes `MockAIProvider`.
+- `analyzeRepository`/`generateProjectContext` remain out of scope (Phase 7/8 — no
+  `RepositoryProfile`/`RepositoryAnalysis`/`ProjectContext` shape exists yet).
+- No live API call was made as part of verification (offline tests only, by choice);
+  a real `ANTHROPIC_API_KEY`-backed run is worth trying manually.
 
 ## Phase 5 — CLI — **in progress**
 
@@ -221,8 +252,10 @@ dashboard-created blueprint). CLI must be usable with zero dashboard involvement
       init.ts`) collects a structured `BlueprintInput` (project/architecture/stack/
       testing/security, plus which of the three real agents —
       `claude`/`cursor`/`codex`; `copilot` isn't offered since there's no
-      `CopilotAdapter` yet) → `MockAIProvider.generateBlueprint` →
-      `adapter.validate` (first real caller of the Phase 3 `validate` work) →
+      `CopilotAdapter` yet) → `selectAIProvider().generateBlueprint` (real
+      `ClaudeAIProvider` when `ANTHROPIC_API_KEY` is set, else `MockAIProvider` —
+      see Phase 4) → `adapter.validate` (first real caller of the Phase 3 `validate`
+      work) →
       `generateWorkspace` + the chosen `AgentAdapter`'s `generateInstructions`/
       `generateSkills`/`generateRules`, merged and `assertNoDuplicatePaths`-checked
       → written to a new local directory. Refuses to write into a non-empty
