@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderAgentInstructions, generateAgentsMd } from "@ai-software-zoll/generators";
 import { ClaudeAdapter } from "../claude-adapter";
+import { generateClaudeSkills } from "../generate-claude-skills";
 import { fullBlueprint } from "./fixtures/full-blueprint";
 import { minimalBlueprint } from "./fixtures/minimal-blueprint";
 
@@ -56,5 +57,12 @@ describe("ClaudeAdapter", () => {
     const first = adapter.generateInstructions(fullBlueprint);
     const second = adapter.generateInstructions(fullBlueprint);
     expect(first).toEqual(second);
+  });
+
+  it("generateSkills matches calling generateClaudeSkills directly (no divergence)", () => {
+    const adapter = new ClaudeAdapter();
+    expect(adapter.generateSkills(fullBlueprint)).toEqual(
+      generateClaudeSkills(fullBlueprint),
+    );
   });
 });

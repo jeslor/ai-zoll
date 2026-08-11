@@ -2,6 +2,7 @@ import type { ProjectBlueprint } from "@ai-software-zoll/blueprint";
 import type { GeneratedFile } from "@ai-software-zoll/shared";
 import { renderAgentInstructions } from "@ai-software-zoll/generators";
 import type { AgentAdapter } from "../agent-adapter";
+import { generateClaudeSkills } from "./generate-claude-skills";
 
 /**
  * Claude Code specifically discovers CLAUDE.md at the workspace root (not
@@ -20,5 +21,9 @@ export class ClaudeAdapter implements AgentAdapter {
         content: renderAgentInstructions(blueprint, "CLAUDE.md"),
       },
     ];
+  }
+
+  generateSkills(blueprint: ProjectBlueprint): GeneratedFile[] {
+    return generateClaudeSkills(blueprint);
   }
 }

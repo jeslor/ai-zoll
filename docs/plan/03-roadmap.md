@@ -123,11 +123,11 @@ Implement one adapter first (recommend `ClaudeAdapter`, since this repo is devel
 with Claude Code), then Cursor, then Codex. Do not implement all three at once.
 
 - [x] `AgentAdapter` interface (`packages/agents/src/agent-adapter.ts`) — declares
-      only `id` and `generateInstructions` for now, matching the `AIProvider`
-      precedent (`packages/ai/src/provider.ts`): `generateSkills`/`generateRules`/
-      `validate` from spec §21's full interface aren't declared yet since their
-      shapes aren't grounded in anything built (no `ValidationResult` type, no
-      defined meaning of "rules" per agent).
+      `id`, `generateInstructions`, `generateSkills`. `generateRules`/`validate`
+      from spec §21's full interface aren't declared yet since their shapes aren't
+      grounded in anything built (no `ValidationResult` type, no defined meaning of
+      "rules" per agent) — matching the `AIProvider` precedent
+      (`packages/ai/src/provider.ts`).
 - [x] `ClaudeAdapter.generateInstructions` (`packages/agents/src/claude/`) — produces
       `CLAUDE.md`, the file Claude Code actually discovers at the workspace root
       (not the agent-agnostic `AGENTS.md`). Reuses
@@ -136,14 +136,57 @@ with Claude Code), then Cursor, then Codex. Do not implement all three at once.
       literally open with the text "# AGENTS.md"; `AGENTS.md`'s own output verified
       unchanged) — so the substantive content stays DRY across the generic and
       Claude-specific instruction files.
-- [ ] `ClaudeAdapter.generateSkills` — relocate/adapt `packages/generators`'
-      canonical `skills/*/SKILL.md` into `.claude/skills/*/SKILL.md`
+- [x] `ClaudeAdapter.generateSkills` (`packages/agents/src/claude/generate-claude-skills.ts`)
+      — calls `packages/generators`' `generateSkills` (same 0-N conditional behavior
+      flows through automatically) and transforms each result: relocates
+      `skills/<id>/SKILL.md` → `.claude/skills/<id>/SKILL.md` and prepends
+      Claude Code's actual discovery frontmatter (`name`/`description`), which the
+      canonical generator correctly doesn't include (frontmatter is Claude-specific,
+      Rule 8). The frontmatter-description map is local to `packages/agents`, not
+      added to `packages/generators`' `SkillDefinition` — keeps the generic layer
+      agent-agnostic. Throws loudly (not silently) if a future skill id has no
+      frontmatter mapping yet, rather than emitting an undiscoverable skill file.
 - [ ] `ClaudeAdapter.generateRules` — meaning not yet defined for Claude specifically
-      (Claude Code has no distinct rules-file concept the way Cursor's
-      `.cursorrules` does); needs its own scoping pass
+      (Claude Code has no distinct rules-file concept the way Cursor's `.cursor/rules/`
+      does); needs its own scoping pass
 - [ ] `ClaudeAdapter.validate` — needs a `ValidationResult` shape design first
-- [ ] `CursorAdapter`, `CodexAdapter` — after `ClaudeAdapter` is more complete, one
-      at a time
+- [x] `CursorAdapter.generateInstructions`/`.generateSkills`
+      (`packages/agents/src/cursor/`) — researched Cursor's actual current (2026)
+      convention rather than guessing: `.cursor/rules/*.mdc`, YAML frontmatter
+      (`description`/`globs`/`alwaysApply`), **`.mdc` extension load-bearing** (a
+      plain `.md` file there is silently ignored by Cursor's rules system). Sources:
+      [Cursor Docs — Rules](https://cursor.com/docs/rules),
+      [Cursor Rules Best Practices (Morph)](https://www.morphllm.com/cursor-rules-best-practices).
+      `generateInstructions` → one always-applied `.cursor/rules/project.mdc`
+      (reuses `renderAgentInstructions`, same as Claude); `generateSkills` → one
+      `.mdc` per canonical skill, `alwaysApply: false`, scoped via `globs`
+      (Cursor's "Auto Attached" rules are its closest analog to a contextual skill).
+      Same local frontmatter-map + throw-on-unmapped-id pattern as `ClaudeAdapter`.
+      Splitting `generateInstructions` into multiple concern-scoped files (Cursor's
+      own best-practice recommendation) is a deliberate future enhancement, not done
+      here.
+- [x] `CodexAdapter.generateInstructions`/`.generateSkills` (`packages/agents/src/codex/`)
+      — researched Codex's actual convention: Codex reads `AGENTS.md` directly
+      (OpenAI originated the format for Codex, later transferred to the Linux
+      Foundation's Agentic AI Foundation for cross-vendor stewardship), concatenating
+      every `AGENTS.md` from the git root down to the cwd. **`generateInstructions`
+      deliberately returns `[]`** — the canonical `AGENTS.md` `generateAgentsMd`
+      already produces *is* Codex's real instructions file, unmodified; unlike
+      Claude/Cursor, no adapted file is needed. This is a genuine finding validating
+      spec Principle 2 (agent-agnostic), not a stub — covered by a dedicated test.
+      `generateSkills` → `.codex/skills/<id>/SKILL.md`, structurally identical to
+      Claude's convention (`name`/`description` frontmatter, one level deep).
+      Sources: [Custom instructions with AGENTS.md — OpenAI Codex docs](https://developers.openai.com/codex/guides/agents-md),
+      [Where Are Codex CLI Skills Stored?](https://www.agensi.io/learn/where-are-codex-cli-skills-stored).
+      **Refactor:** extracted `packages/agents/src/shared-skill-remap.ts`
+      (`remapSkillFile`) once Claude's and Codex's skill-remap logic turned out
+      structurally identical — `generate-claude-skills.ts` now delegates to it too
+      (verified via unchanged tests/golden files). Cursor's version stays separate;
+      its frontmatter shape genuinely differs.
+
+All three initial adapters (`ClaudeAdapter`/`CursorAdapter`/`CodexAdapter`) now have
+`generateInstructions`+`generateSkills`. `generateRules`/`validate` remain open across
+all three — still no defined shape.
 
 ## Phase 4 — AI Blueprint Generation — **not started**
 
