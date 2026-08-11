@@ -1,8 +1,12 @@
 import type { ProjectBlueprint } from "@ai-software-zoll/blueprint";
 import type { GeneratedFile } from "@ai-software-zoll/shared";
 import { renderAgentInstructions } from "@ai-software-zoll/generators";
-import type { AgentAdapter } from "../agent-adapter";
-import { generateClaudeSkills } from "./generate-claude-skills";
+import type { AgentAdapter, ValidationResult } from "../agent-adapter";
+import {
+  generateClaudeSkills,
+  CLAUDE_SKILL_FRONTMATTER,
+} from "./generate-claude-skills";
+import { validateSkillCoverage } from "../validate-skill-coverage";
 
 /**
  * Claude Code specifically discovers CLAUDE.md at the workspace root (not
@@ -25,5 +29,23 @@ export class ClaudeAdapter implements AgentAdapter {
 
   generateSkills(blueprint: ProjectBlueprint): GeneratedFile[] {
     return generateClaudeSkills(blueprint);
+  }
+
+  /**
+   * Claude Code does have a real, distinct .claude/rules/ mechanism (glob-
+   * scoped .md files, loaded deterministically when a matching file is
+   * touched — complementary to CLAUDE.md's always-loaded content and
+   * Skills' description-triggered content). Returns [] because nothing in
+   * the current Blueprint is genuinely pattern-scoped convention data — the
+   * only candidate content (stack/testing/security directives) is already
+   * correctly always-relevant, which is why it lives in CLAUDE.md, not a
+   * glob rule. Source: https://claudefa.st/blog/guide/mechanics/rules-directory
+   */
+  generateRules(_blueprint: ProjectBlueprint): GeneratedFile[] {
+    return [];
+  }
+
+  validate(blueprint: ProjectBlueprint): ValidationResult {
+    return validateSkillCoverage(blueprint, CLAUDE_SKILL_FRONTMATTER);
   }
 }

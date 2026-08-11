@@ -1,7 +1,11 @@
 import type { ProjectBlueprint } from "@ai-software-zoll/blueprint";
 import type { GeneratedFile } from "@ai-software-zoll/shared";
-import type { AgentAdapter } from "../agent-adapter";
-import { generateCodexSkills } from "./generate-codex-skills";
+import type { AgentAdapter, ValidationResult } from "../agent-adapter";
+import {
+  generateCodexSkills,
+  CODEX_SKILL_FRONTMATTER,
+} from "./generate-codex-skills";
+import { validateSkillCoverage } from "../validate-skill-coverage";
 
 /**
  * Codex reads AGENTS.md directly — OpenAI originated the AGENTS.md format
@@ -23,5 +27,19 @@ export class CodexAdapter implements AgentAdapter {
 
   generateSkills(blueprint: ProjectBlueprint): GeneratedFile[] {
     return generateCodexSkills(blueprint);
+  }
+
+  /**
+   * Codex has no separate rules concept at all — OpenAI's own guidance
+   * explicitly recommends keeping required guidance in AGENTS.md or
+   * checked-in docs rather than a distinct rules mechanism. Source:
+   * https://www.codegateway.dev/en/blog/openai-codex-cli-complete-guide-2026
+   */
+  generateRules(_blueprint: ProjectBlueprint): GeneratedFile[] {
+    return [];
+  }
+
+  validate(blueprint: ProjectBlueprint): ValidationResult {
+    return validateSkillCoverage(blueprint, CODEX_SKILL_FRONTMATTER);
   }
 }
