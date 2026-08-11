@@ -14,7 +14,7 @@ import {
  * written to match the same style — new content authored here, not
  * transcribed from the spec.
  */
-const ARCHITECTURE_STYLE_EXPLANATIONS: Record<ArchitectureStyle, string> = {
+export const ARCHITECTURE_STYLE_EXPLANATIONS: Record<ArchitectureStyle, string> = {
   modular:
     "Organizes the application around independent business modules with clear boundaries.",
   layered:
