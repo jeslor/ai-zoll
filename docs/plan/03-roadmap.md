@@ -11,7 +11,7 @@ and generator (Phases 1-2) exist.
 
 `not started` · `in progress` · `done`
 
-## Phase 0 — Product Foundation — **not started**
+## Phase 0 — Product Foundation — **in progress**
 
 Monorepo, TypeScript, pnpm, Turborepo, web app, API, CLI, shared packages, PostgreSQL,
 Prisma, basic CI. No complex UI yet.
@@ -20,7 +20,9 @@ Prisma, basic CI. No complex UI yet.
       `package.json` per package, no framework deps, no business logic)
 - [ ] Real `apps/web` Next.js app scaffolded
 - [ ] Real `apps/api` NestJS app scaffolded
-- [ ] Real `apps/cli` scaffolded
+- [x] Real `apps/cli` scaffolded — see "Phase 5 — CLI" below for the `init` command
+      itself; this checklist item is just the app scaffolding (real `tsc` build,
+      executable `dist/index.js` with shebang, real `vitest` tests).
 - [ ] PostgreSQL + Prisma wired up (`prisma/schema.prisma`)
 - [ ] CI actually runs meaningful typecheck/lint/test (currently placeholder-safe)
 
@@ -209,10 +211,29 @@ Connect a real `AIProvider`. Input: project description + user selections. Outpu
 *validated* `ProjectBlueprint` — never trust raw AI text directly; validate, and
 retry/repair on failure.
 
-## Phase 5 — CLI — **not started**
+## Phase 5 — CLI — **in progress**
 
 `npx ai-software-zoll init` (interactive), then `init <project-id>` (downloads a
 dashboard-created blueprint). CLI must be usable with zero dashboard involvement.
+
+- [x] `init` (interactive, no project-id) — **this is spec §41's MVP milestone,
+      concretely realized**: `@inquirer/prompts` wizard (`apps/cli/src/commands/
+      init.ts`) collects a structured `BlueprintInput` (project/architecture/stack/
+      testing/security, plus which of the three real agents —
+      `claude`/`cursor`/`codex`; `copilot` isn't offered since there's no
+      `CopilotAdapter` yet) → `MockAIProvider.generateBlueprint` →
+      `adapter.validate` (first real caller of the Phase 3 `validate` work) →
+      `generateWorkspace` + the chosen `AgentAdapter`'s `generateInstructions`/
+      `generateSkills`/`generateRules`, merged and `assertNoDuplicatePaths`-checked
+      → written to a new local directory. Refuses to write into a non-empty
+      directory. The orchestration core (`run-init.ts`) is a plain, prompt-library-
+      free async function — fully unit-tested (temp-directory writes, non-empty-dir
+      refusal, invalid-input rejection) without needing a TTY. Verified for real:
+      generated actual multi-file project directories on disk for all three agents
+      and read the output back.
+- [ ] `init <project-id>` (downloads a dashboard-created blueprint) — needs
+      `apps/api`/`apps/web` first
+- [ ] `analyze`, `generate`, `sync`, `login` — later Phase 5/7/9 commands
 
 ## Phase 6 — Dashboard — **not started**
 

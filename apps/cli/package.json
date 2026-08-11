@@ -7,10 +7,23 @@
     "ai-software-zoll": "./dist/index.js"
   },
   "scripts": {
-    "build": "echo \"[cli] no app scaffolded yet\"",
-    "dev": "echo \"[cli] no app scaffolded yet\"",
-    "lint": "echo \"[cli] no app scaffolded yet\"",
-    "test": "echo \"[cli] no app scaffolded yet\"",
-    "typecheck": "echo \"[cli] no app scaffolded yet\""
+    "build": "tsc -p tsconfig.json && chmod +x dist/index.js",
+    "dev": "tsc -p tsconfig.json --watch",
+    "lint": "echo \"[cli] lint tooling pending (Phase 0)\"",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ai-software-zoll/agents": "workspace:^",
+    "@ai-software-zoll/ai": "workspace:^",
+    "@ai-software-zoll/blueprint": "workspace:^",
+    "@ai-software-zoll/generators": "workspace:^",
+    "@ai-software-zoll/shared": "workspace:^",
+    "@inquirer/prompts": "^8.5.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   }
 }
