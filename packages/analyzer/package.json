@@ -1,5 +1,5 @@
 {
-  "name": "@ai-software-zoll/analyzer",
+  "name": "@ai-zoll/analyzer",
   "version": "0.0.0",
   "private": true,
   "description": "Deterministic repository analyzers for the existing-project workflow.",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ClaudeAdapter, CursorAdapter, CodexAdapter } from "@ai-software-zoll/agents";
+import { ClaudeAdapter, CursorAdapter, CodexAdapter } from "@ai-zoll/agents";
 import { getAgentAdapter, SUPPORTED_AGENT_IDS } from "../agent-adapters";
 
 describe("getAgentAdapter", () => {

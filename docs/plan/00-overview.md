@@ -4,7 +4,7 @@
 
 ## Vision
 
-AI Software Zoll helps developers prepare software projects for AI-assisted
+AI Zoll helps developers prepare software projects for AI-assisted
 development. It does not replace Claude Code, Cursor, Codex, or Copilot — it solves the
 problem that comes *before* and *around* those tools: developers often don't know how
 to structure a project for AI-assisted development, what instructions to provide, what
@@ -48,7 +48,7 @@ development environment, for both new projects and existing repositories.
 Zoll is never "an AI that writes your code" — that puts it in direct competition with
 coding agents. Instead:
 
-> **AI Software Zoll prepares, structures, and maintains the context that AI coding
+> **AI Zoll prepares, structures, and maintains the context that AI coding
 > agents need to build software effectively.**
 
 - For individuals: turn your project idea or existing repository into an AI-ready

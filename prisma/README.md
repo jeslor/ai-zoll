@@ -11,7 +11,7 @@ other Postgres works). Run migrations from `apps/api` (schema path comes from
 `apps/api/prisma.config.ts`, no `--schema` flag needed):
 
 ```sh
-pnpm --filter @ai-software-zoll/api exec prisma migrate dev
+pnpm --filter @ai-zoll/api exec prisma migrate dev
 ```
 
 The Prisma Client generates into `apps/api/generated/prisma` (not

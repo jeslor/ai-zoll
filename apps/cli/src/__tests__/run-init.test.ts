@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import type { BlueprintInput } from "@ai-software-zoll/ai";
+import type { BlueprintInput } from "@ai-zoll/ai";
 import { runInit } from "../run-init";
 
 const fullInput: BlueprintInput = {

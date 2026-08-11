@@ -1,5 +1,5 @@
-import { ClaudeAIProvider, MockAIProvider } from "@ai-software-zoll/ai";
-import type { AIProvider } from "@ai-software-zoll/ai";
+import { ClaudeAIProvider, MockAIProvider } from "@ai-zoll/ai";
+import type { AIProvider } from "@ai-zoll/ai";
 
 /**
  * Picks the real, LLM-backed provider when Claude credentials are available

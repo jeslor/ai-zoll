@@ -1,5 +1,5 @@
 import { describe, expect, it, afterEach, vi } from "vitest";
-import { ClaudeAIProvider, MockAIProvider } from "@ai-software-zoll/ai";
+import { ClaudeAIProvider, MockAIProvider } from "@ai-zoll/ai";
 import { selectAIProvider } from "../select-ai-provider";
 
 afterEach(() => {

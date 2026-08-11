@@ -1,5 +1,5 @@
-import type { ProjectBlueprint } from "@ai-software-zoll/blueprint";
-import { generateSkills } from "@ai-software-zoll/generators";
+import type { ProjectBlueprint } from "@ai-zoll/blueprint";
+import { generateSkills } from "@ai-zoll/generators";
 import type { ValidationResult } from "./agent-adapter";
 
 const SKILL_PATH_PATTERN = /^skills\/([^/]+)\/SKILL\.md$/;

@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { safeParseBlueprint } from "@ai-software-zoll/blueprint";
+import { safeParseBlueprint } from "@ai-zoll/blueprint";
 import { PrismaService } from "../prisma/prisma.service";
 import { ProjectsService } from "../projects/projects.service";
 
 /**
  * Persists a validated ProjectBlueprint per project. Reuses the canonical
- * safeParseBlueprint validator from @ai-software-zoll/blueprint directly
+ * safeParseBlueprint validator from @ai-zoll/blueprint directly
  * (Rule 9/ADR 0002) — the request body is re-validated server-side even
  * though a well-behaved caller (an AIProvider) already validated it locally.
  */

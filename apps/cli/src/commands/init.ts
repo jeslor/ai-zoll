@@ -2,12 +2,12 @@ import { input, select, checkbox } from "@inquirer/prompts";
 import {
   ARCHITECTURE_STYLE_DISPLAY_NAMES,
   ARCHITECTURE_STYLE_EXPLANATIONS,
-} from "@ai-software-zoll/generators";
+} from "@ai-zoll/generators";
 import type {
   ArchitectureStyle,
   ProjectType,
-} from "@ai-software-zoll/blueprint";
-import type { BlueprintInput } from "@ai-software-zoll/ai";
+} from "@ai-zoll/blueprint";
+import type { BlueprintInput } from "@ai-zoll/ai";
 import { runInit } from "../run-init";
 import { SUPPORTED_AGENT_IDS } from "../agent-adapters";
 import type { SupportedAgentId } from "../agent-adapters";

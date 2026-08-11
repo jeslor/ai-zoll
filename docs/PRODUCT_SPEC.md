@@ -1,8 +1,8 @@
-# AI Software Zoll
+# AI Zoll
 
 ## Master Product Specification, Development Roadmap & Coding-Agent Instructions
 
-> **Purpose:** This document is the authoritative specification for building AI Software Zoll. The coding agent should treat it as the product source of truth and implement the application incrementally according to the phases below.
+> **Purpose:** This document is the authoritative specification for building AI Zoll. The coding agent should treat it as the product source of truth and implement the application incrementally according to the phases below.
 >
 > **Provenance:** this file is a verbatim copy of the original product specification as provided by the project owner on 2026-08-10. It must not be edited to "correct" or update product direction — if direction changes, record the change as a new ADR in `docs/decisions/` or a dated addendum, and keep this file as the historical source of truth. Derived, operational docs live in `docs/plan/` and link back here by section number.
 
@@ -10,7 +10,7 @@
 
 # 1. Product Vision
 
-AI Software Zoll is a platform and CLI that helps developers prepare software projects for AI-assisted development.
+AI Zoll is a platform and CLI that helps developers prepare software projects for AI-assisted development.
 
 The product does **not** attempt to replace Claude Code, Cursor, Codex, GitHub Copilot, or other coding agents.
 
@@ -18,7 +18,7 @@ Instead, it solves the problem that comes **before** and **around** those agents
 
 > Developers often do not know how to structure a project for AI-assisted development, what instructions to provide, what skills to create, how to organize project context, or how different coding agents should be configured.
 
-AI Software Zoll creates a structured, canonical **Project Blueprint** and converts that blueprint into an AI-ready development environment.
+AI Zoll creates a structured, canonical **Project Blueprint** and converts that blueprint into an AI-ready development environment.
 
 The platform supports both:
 
@@ -136,15 +136,15 @@ The dashboard is not the only interface.
 Developers should be able to use:
 
 ```bash
-npx ai-software-zoll init
+npx ai-zoll init
 ```
 
 ```bash
-npx ai-software-zoll analyze
+npx ai-zoll analyze
 ```
 
 ```bash
-npx ai-software-zoll sync
+npx ai-zoll sync
 ```
 
 The web application and CLI must use the same underlying blueprint system.
@@ -158,7 +158,7 @@ Use a monorepo.
 Recommended structure:
 
 ```text
-ai-software-zoll/
+ai-zoll/
 │
 ├── apps/
 │   │
@@ -586,7 +586,7 @@ The product explains:
 The user receives a CLI command:
 
 ```bash
-npx ai-software-zoll analyze
+npx ai-zoll analyze
 ```
 
 ---
@@ -877,37 +877,37 @@ The canonical blueprint must never depend on a specific agent.
 Initial commands:
 
 ```bash
-npx ai-software-zoll init
+npx ai-zoll init
 ```
 
 Starts a new project interactively.
 
 ```bash
-npx ai-software-zoll init <project-id>
+npx ai-zoll init <project-id>
 ```
 
 Downloads a blueprint created from the dashboard.
 
 ```bash
-npx ai-software-zoll analyze
+npx ai-zoll analyze
 ```
 
 Analyzes an existing project.
 
 ```bash
-npx ai-software-zoll generate
+npx ai-zoll generate
 ```
 
 Generates the AI layer from an analysis/blueprint.
 
 ```bash
-npx ai-software-zoll sync
+npx ai-zoll sync
 ```
 
 Synchronizes the local project with its blueprint.
 
 ```bash
-npx ai-software-zoll login
+npx ai-zoll login
 ```
 
 Authenticates the CLI.
@@ -1017,7 +1017,7 @@ A project should know which blueprint version it was generated from.
 This enables future:
 
 ```bash
-npx ai-software-zoll sync
+npx ai-zoll sync
 ```
 
 ---
@@ -1029,7 +1029,7 @@ This should be a later feature, not MVP.
 Eventually:
 
 ```bash
-npx ai-software-zoll check
+npx ai-zoll check
 ```
 
 could compare:
@@ -1448,13 +1448,13 @@ If validation fails, retry or repair.
 Implement:
 
 ```bash
-npx ai-software-zoll init
+npx ai-zoll init
 ```
 
 Then:
 
 ```bash
-npx ai-software-zoll init PROJECT_ID
+npx ai-zoll init PROJECT_ID
 ```
 
 The CLI should be usable without the dashboard.
@@ -1485,7 +1485,7 @@ The dashboard should consume the same blueprint APIs as the CLI.
 Build:
 
 ```bash
-npx ai-software-zoll analyze
+npx ai-zoll analyze
 ```
 
 Implement deterministic analyzers first.
@@ -1532,7 +1532,7 @@ Running it twice should not continuously duplicate files.
 Implement:
 
 ```bash
-npx ai-software-zoll sync
+npx ai-zoll sync
 ```
 
 Compare:
@@ -1568,7 +1568,7 @@ Roles
 Build:
 
 ```bash
-npx ai-software-zoll check
+npx ai-zoll check
 ```
 
 Compare expected architecture with actual repository state.
@@ -1673,7 +1673,7 @@ A feature is not complete until:
 The MVP is complete when a developer can do this:
 
 ```bash
-npx ai-software-zoll init
+npx ai-zoll init
 ```
 
 Answer:
@@ -1710,7 +1710,7 @@ The second MVP capability is:
 ```bash
 cd existing-project
 
-npx ai-software-zoll analyze
+npx ai-zoll analyze
 ```
 
 Zoll detects:
@@ -1877,7 +1877,7 @@ The long-term system should look like:
 
 # 47. The Core Differentiator
 
-AI Software Zoll should never market itself as:
+AI Zoll should never market itself as:
 
 > "An AI that writes your code."
 
@@ -1885,7 +1885,7 @@ That puts it directly against coding agents.
 
 Instead:
 
-> **AI Software Zoll prepares, structures, and maintains the context that AI coding agents need to build software effectively.**
+> **AI Zoll prepares, structures, and maintains the context that AI coding agents need to build software effectively.**
 
 For individuals:
 

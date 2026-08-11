@@ -1,6 +1,6 @@
-import type { ProjectBlueprint } from "@ai-software-zoll/blueprint";
-import type { GeneratedFile } from "@ai-software-zoll/shared";
-import { generateSkills } from "@ai-software-zoll/generators";
+import type { ProjectBlueprint } from "@ai-zoll/blueprint";
+import type { GeneratedFile } from "@ai-zoll/shared";
+import { generateSkills } from "@ai-zoll/generators";
 import type { AgentSkillMeta } from "../shared-skill-remap";
 import { remapSkillFile } from "../shared-skill-remap";
 

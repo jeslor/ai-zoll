@@ -1,4 +1,4 @@
-# @ai-software-zoll/shared
+# @ai-zoll/shared
 
 Cross-cutting types and utilities with no framework dependency (no Next.js/NestJS/
 Prisma imports here). Used by any other package/app that needs common helpers without

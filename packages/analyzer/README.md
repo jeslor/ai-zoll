@@ -1,4 +1,4 @@
-# @ai-software-zoll/analyzer
+# @ai-zoll/analyzer
 
 Deterministic repository analyzers (`PackageAnalyzer`, `FrameworkAnalyzer`,
 `DatabaseAnalyzer`, `DirectoryAnalyzer`, `TestAnalyzer`, `GitAnalyzer`,

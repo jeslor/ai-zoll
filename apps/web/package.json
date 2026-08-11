@@ -1,8 +1,8 @@
 {
-  "name": "@ai-software-zoll/web",
+  "name": "@ai-zoll/web",
   "version": "0.0.0",
   "private": true,
-  "description": "Next.js dashboard for AI Software Zoll.",
+  "description": "Next.js dashboard for AI Zoll.",
   "scripts": {
     "build": "echo \"[web] no app scaffolded yet\"",
     "dev": "echo \"[web] no app scaffolded yet\"",

@@ -17,7 +17,7 @@ importers:
 
   apps/api:
     dependencies:
-      '@ai-software-zoll/blueprint':
+      '@ai-zoll/blueprint':
         specifier: workspace:^
         version: link:../../packages/blueprint
       '@nestjs/common':
@@ -75,19 +75,19 @@ importers:
 
   apps/cli:
     dependencies:
-      '@ai-software-zoll/agents':
+      '@ai-zoll/agents':
         specifier: workspace:^
         version: link:../../packages/agents
-      '@ai-software-zoll/ai':
+      '@ai-zoll/ai':
         specifier: workspace:^
         version: link:../../packages/ai
-      '@ai-software-zoll/blueprint':
+      '@ai-zoll/blueprint':
         specifier: workspace:^
         version: link:../../packages/blueprint
-      '@ai-software-zoll/generators':
+      '@ai-zoll/generators':
         specifier: workspace:^
         version: link:../../packages/generators
-      '@ai-software-zoll/shared':
+      '@ai-zoll/shared':
         specifier: workspace:^
         version: link:../../packages/shared
       '@inquirer/prompts':
@@ -108,13 +108,13 @@ importers:
 
   packages/agents:
     dependencies:
-      '@ai-software-zoll/blueprint':
+      '@ai-zoll/blueprint':
         specifier: workspace:^
         version: link:../blueprint
-      '@ai-software-zoll/generators':
+      '@ai-zoll/generators':
         specifier: workspace:^
         version: link:../generators
-      '@ai-software-zoll/shared':
+      '@ai-zoll/shared':
         specifier: workspace:^
         version: link:../shared
     devDependencies:
@@ -130,7 +130,7 @@ importers:
 
   packages/ai:
     dependencies:
-      '@ai-software-zoll/blueprint':
+      '@ai-zoll/blueprint':
         specifier: workspace:^
         version: link:../blueprint
       '@anthropic-ai/sdk':
@@ -170,10 +170,10 @@ importers:
 
   packages/generators:
     dependencies:
-      '@ai-software-zoll/blueprint':
+      '@ai-zoll/blueprint':
         specifier: workspace:^
         version: link:../blueprint
-      '@ai-software-zoll/shared':
+      '@ai-zoll/shared':
         specifier: workspace:^
         version: link:../shared
     devDependencies:

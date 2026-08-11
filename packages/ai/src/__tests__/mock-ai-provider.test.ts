@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CURRENT_BLUEPRINT_VERSION, BlueprintValidationError } from "@ai-software-zoll/blueprint";
+import { CURRENT_BLUEPRINT_VERSION, BlueprintValidationError } from "@ai-zoll/blueprint";
 import { MockAIProvider } from "../providers/mock-ai-provider";
 import type { BlueprintInput } from "../provider";
 import validInput from "./fixtures/valid-blueprint-input.json";

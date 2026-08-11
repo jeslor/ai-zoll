@@ -1,4 +1,4 @@
-# @ai-software-zoll/ai
+# @ai-zoll/ai
 
 `AIProvider` abstraction (`generateBlueprint`, `analyzeRepository`,
 `generateProjectContext`). See `docs/PRODUCT_SPEC.md` §33-34 and
@@ -30,7 +30,7 @@
 - `src/providers/claude-ai-provider.ts` — `ClaudeAIProvider`, the Phase 4 implementation.
 - `src/prompts/blueprint-prompt.ts` — system/user/repair prompt text and the
   Structured Outputs schema (`ProjectBlueprintSchema.omit({ version: true })`, reused
-  from `@ai-software-zoll/blueprint` rather than hand-duplicated).
+  from `@ai-zoll/blueprint` rather than hand-duplicated).
 - `src/index.ts` — the package's public surface.
 
 ## `ClaudeAIProvider`

@@ -1,5 +1,5 @@
-import type { AgentAdapter } from "@ai-software-zoll/agents";
-import { ClaudeAdapter, CursorAdapter, CodexAdapter } from "@ai-software-zoll/agents";
+import type { AgentAdapter } from "@ai-zoll/agents";
+import { ClaudeAdapter, CursorAdapter, CodexAdapter } from "@ai-zoll/agents";
 
 /**
  * Only the agents with a real adapter are offered — the Blueprint schema's

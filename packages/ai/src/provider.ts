@@ -1,4 +1,4 @@
-import type { ProjectBlueprint } from "@ai-software-zoll/blueprint";
+import type { ProjectBlueprint } from "@ai-zoll/blueprint";
 
 /**
  * The structured input a Blueprint is generated from — the same fields a

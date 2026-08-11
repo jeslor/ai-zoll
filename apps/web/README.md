@@ -1,4 +1,4 @@
-# @ai-software-zoll/web
+# @ai-zoll/web
 
 Next.js dashboard. See `docs/PRODUCT_SPEC.md` §6-11, 29-30 and
 `docs/plan/03-roadmap.md` Phase 6.

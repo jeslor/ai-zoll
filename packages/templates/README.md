@@ -1,4 +1,4 @@
-# @ai-software-zoll/templates
+# @ai-zoll/templates
 
 Raw templates (no business logic) consumed by `packages/generators` and
 `packages/agents`. See `docs/PRODUCT_SPEC.md` §3.

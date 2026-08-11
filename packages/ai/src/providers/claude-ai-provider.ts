@@ -4,7 +4,7 @@ import {
   safeParseBlueprint,
   BlueprintValidationError,
   type ProjectBlueprint,
-} from "@ai-software-zoll/blueprint";
+} from "@ai-zoll/blueprint";
 import type { AIProvider, BlueprintInput } from "../provider";
 import {
   BLUEPRINT_OUTPUT_FORMAT,

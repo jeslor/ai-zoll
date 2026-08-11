@@ -6,7 +6,7 @@ Accepted (mandated by `docs/PRODUCT_SPEC.md` §3).
 
 ## Context
 
-AI Software Zoll ships three deployables (web dashboard, API, CLI) that all need to
+AI Zoll ships three deployables (web dashboard, API, CLI) that all need to
 share the same canonical Blueprint types, validation, generators, and agent adapters.
 Without a monorepo, these packages would drift out of sync or be duplicated.
 

@@ -23,7 +23,7 @@ Prisma, basic CI. No complex UI yet.
       `POST/GET /projects`, `GET /projects/:id`, `POST/GET /projects/:id/blueprint`
       (hand-written, no `@nestjs/cli` — plain `tsc` build matching every other
       package). Blueprint writes are re-validated server-side via the canonical
-      `safeParseBlueprint` from `@ai-software-zoll/blueprint` (Rule 9/ADR 0002),
+      `safeParseBlueprint` from `@ai-zoll/blueprint` (Rule 9/ADR 0002),
       not a redefined DTO — every request body is Zod-validated (a small
       hand-written `ZodValidationPipe`, no `class-validator`). Every write creates
       an append-only `BlueprintVersion` row (spec §26) and upserts the
@@ -271,7 +271,7 @@ JSON Schema).
 
 ## Phase 5 — CLI — **in progress**
 
-`npx ai-software-zoll init` (interactive), then `init <project-id>` (downloads a
+`npx ai-zoll init` (interactive), then `init <project-id>` (downloads a
 dashboard-created blueprint). CLI must be usable with zero dashboard involvement.
 
 - [x] `init` (interactive, no project-id) — **this is spec §41's MVP milestone,
@@ -303,7 +303,7 @@ built only after Phases 1-2 exist, not before.
 
 ## Phase 7 — Existing Project Analysis — **not started**
 
-`npx ai-software-zoll analyze`. Deterministic analyzers first (see
+`npx ai-zoll analyze`. Deterministic analyzers first (see
 `packages/analyzer`), then AI interpretation on top. Never modifies application source
 code at this stage.
 
@@ -315,7 +315,7 @@ running twice must not duplicate files.
 
 ## Phase 9 — Sync — **not started**
 
-`npx ai-software-zoll sync`. Compare local Blueprint, remote Blueprint, local AI
+`npx ai-zoll sync`. Compare local Blueprint, remote Blueprint, local AI
 context; show a diff before applying anything.
 
 ## Phase 10 — Organizations — **not started**
@@ -325,7 +325,7 @@ Teams, Shared Standards, Project Templates, Roles.
 
 ## Phase 11 — Drift Detection — **not started**
 
-`npx ai-software-zoll check`. Compare expected architecture vs. actual repository
+`npx ai-zoll check`. Compare expected architecture vs. actual repository
 state; report violations (import boundary breaks, undocumented directories, testing
 convention mismatches).
 
@@ -338,5 +338,9 @@ engine → 5. Generated workspace → 6. First agent adapter → 7. Mock AI prov
 adapters → 15. Blueprint versioning → 16. Sync → 17. Organization mode →
 18. Drift detection.
 
-**Next up:** Phase 1 (Blueprint Engine) is the true starting point for real
-implementation — build `packages/blueprint` before anything else.
+**Next up:** Phases 1-4 are done; Phase 0 (`apps/api`'s first vertical slice,
+PostgreSQL/Prisma) and Phase 5 (`init`) are substantially in progress. The next
+unstarted step in spec §48's order is step 10, "New-project workflow" — largely
+already satisfied by `apps/cli init` + `apps/api`'s Projects/Blueprint endpoints;
+what's still genuinely open is wiring the CLI's `init <project-id>` to actually call
+the new API, then step 11, `apps/web` (Dashboard).

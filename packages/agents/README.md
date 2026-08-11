@@ -1,4 +1,4 @@
-# @ai-software-zoll/agents
+# @ai-zoll/agents
 
 `AgentAdapter` implementations, one subdirectory per agent: `claude/`, `cursor/`,
 `codex/`, `copilot/`. See `docs/PRODUCT_SPEC.md` §21 and
