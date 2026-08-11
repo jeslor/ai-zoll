@@ -1,19 +1,15 @@
 import type { ProjectBlueprint } from "@ai-software-zoll/blueprint";
 import type { GeneratedFile } from "@ai-software-zoll/shared";
 
+/** Result of checking whether an adapter can generate for a given Blueprint. */
+export interface ValidationResult {
+  valid: boolean;
+  issues: string[];
+}
+
 /**
- * AgentAdapter abstraction (spec §21). Only `id`, `generateInstructions`, and
- * `generateSkills` are declared here so far. The full spec interface also
- * has:
- *
- *   generateRules(blueprint): GeneratedFile[]      (meaning is agent-specific
- *     and not yet defined for any agent — needs its own scoping pass)
- *   validate(blueprint): ValidationResult           (needs a ValidationResult
- *     shape that doesn't exist yet)
- *
- * Those aren't declared yet because designing them now would mean guessing
- * at capabilities no adapter implements (Rule 1). Add them to this interface
- * when their respective unit starts.
+ * AgentAdapter abstraction (spec §21) — now fully declared: `id`,
+ * `generateInstructions`, `generateSkills`, `generateRules`, `validate`.
  */
 export interface AgentAdapter {
   /** Stable, lowercase identifier, e.g. "claude". */
@@ -25,4 +21,16 @@ export interface AgentAdapter {
    * May return zero files if the underlying canonical generator did.
    */
   generateSkills(blueprint: ProjectBlueprint): GeneratedFile[];
+  /**
+   * Agent-specific rule files, distinct from generateInstructions (always-
+   * loaded) and generateSkills (contextually loaded). May legitimately
+   * return zero files — see each adapter's implementation for why.
+   */
+  generateRules(blueprint: ProjectBlueprint): GeneratedFile[];
+  /**
+   * Checks whether this adapter can generate for the given Blueprint
+   * without error — currently: whether every skill packages/generators
+   * would produce has a frontmatter mapping in this adapter.
+   */
+  validate(blueprint: ProjectBlueprint): ValidationResult;
 }

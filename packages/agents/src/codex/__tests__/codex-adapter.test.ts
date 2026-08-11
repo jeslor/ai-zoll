@@ -28,4 +28,15 @@ describe("CodexAdapter", () => {
     const second = adapter.generateSkills(fullBlueprint);
     expect(first).toEqual(second);
   });
+
+  it("generateRules returns [] for full and minimal blueprints", () => {
+    const adapter = new CodexAdapter();
+    expect(adapter.generateRules(fullBlueprint)).toEqual([]);
+    expect(adapter.generateRules(minimalBlueprint)).toEqual([]);
+  });
+
+  it("validate reports valid: true for a blueprint whose skills are all mapped", () => {
+    const adapter = new CodexAdapter();
+    expect(adapter.validate(fullBlueprint)).toEqual({ valid: true, issues: [] });
+  });
 });

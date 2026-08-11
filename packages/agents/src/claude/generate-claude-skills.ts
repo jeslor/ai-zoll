@@ -11,7 +11,7 @@ import { remapSkillFile } from "../shared-skill-remap";
  * agent-agnostic, Rule 8). This map supplies it, one entry per skill id that
  * actually exists in packages/generators today.
  */
-const CLAUDE_SKILL_FRONTMATTER: Record<string, AgentSkillMeta> = {
+export const CLAUDE_SKILL_FRONTMATTER: Record<string, AgentSkillMeta> = {
   testing: {
     name: "testing",
     description:

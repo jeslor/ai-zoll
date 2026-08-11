@@ -117,17 +117,14 @@ same files out (golden-tested, see `06-testing-strategy.md`).
 `skills/`, `workflows/`. The `main`/`phase-2/project-md-generator` branch divergence
 flagged earlier is resolved — both are merged together here.
 
-## Phase 3 — Agent Adapters — **in progress**
+## Phase 3 — Agent Adapters — **done**
 
 Implement one adapter first (recommend `ClaudeAdapter`, since this repo is developed
 with Claude Code), then Cursor, then Codex. Do not implement all three at once.
 
-- [x] `AgentAdapter` interface (`packages/agents/src/agent-adapter.ts`) — declares
-      `id`, `generateInstructions`, `generateSkills`. `generateRules`/`validate`
-      from spec §21's full interface aren't declared yet since their shapes aren't
-      grounded in anything built (no `ValidationResult` type, no defined meaning of
-      "rules" per agent) — matching the `AIProvider` precedent
-      (`packages/ai/src/provider.ts`).
+- [x] `AgentAdapter` interface (`packages/agents/src/agent-adapter.ts`) — spec §21's
+      full interface: `id`, `generateInstructions`, `generateSkills`,
+      `generateRules`, `validate` (plus the `ValidationResult` type it returns).
 - [x] `ClaudeAdapter.generateInstructions` (`packages/agents/src/claude/`) — produces
       `CLAUDE.md`, the file Claude Code actually discovers at the workspace root
       (not the agent-agnostic `AGENTS.md`). Reuses
@@ -146,10 +143,6 @@ with Claude Code), then Cursor, then Codex. Do not implement all three at once.
       added to `packages/generators`' `SkillDefinition` — keeps the generic layer
       agent-agnostic. Throws loudly (not silently) if a future skill id has no
       frontmatter mapping yet, rather than emitting an undiscoverable skill file.
-- [ ] `ClaudeAdapter.generateRules` — meaning not yet defined for Claude specifically
-      (Claude Code has no distinct rules-file concept the way Cursor's `.cursor/rules/`
-      does); needs its own scoping pass
-- [ ] `ClaudeAdapter.validate` — needs a `ValidationResult` shape design first
 - [x] `CursorAdapter.generateInstructions`/`.generateSkills`
       (`packages/agents/src/cursor/`) — researched Cursor's actual current (2026)
       convention rather than guessing: `.cursor/rules/*.mdc`, YAML frontmatter
@@ -184,9 +177,31 @@ with Claude Code), then Cursor, then Codex. Do not implement all three at once.
       (verified via unchanged tests/golden files). Cursor's version stays separate;
       its frontmatter shape genuinely differs.
 
-All three initial adapters (`ClaudeAdapter`/`CursorAdapter`/`CodexAdapter`) now have
-`generateInstructions`+`generateSkills`. `generateRules`/`validate` remain open across
-all three — still no defined shape.
+- [x] `generateRules` for all three adapters — researched each agent's actual "rules"
+      concept rather than guessing, and all three return `[]`, each for a different,
+      sourced reason: **Claude** has a real `.claude/rules/` mechanism (glob-scoped
+      `.md`, added early 2026) but nothing in the current Blueprint is genuinely
+      pattern-scoped convention data — the only candidate content is already
+      correctly always-relevant, which is why it lives in `CLAUDE.md` instead
+      ([source](https://claudefa.st/blog/guide/mechanics/rules-directory)).
+      **Cursor**'s "rules" *are* the `.mdc` files, already fully used by
+      `generateInstructions`+`generateSkills` — nothing left to add without
+      inventing content. **Codex** has no separate rules concept at all — OpenAI's
+      own guidance recommends `AGENTS.md`/checked-in docs instead
+      ([source](https://www.codegateway.dev/en/blog/openai-codex-cli-complete-guide-2026)).
+- [x] `validate` for all three adapters — shared `validateSkillCoverage`
+      (`packages/agents/src/validate-skill-coverage.ts`), checking whether every
+      skill a Blueprint triggers (via `packages/generators`' `generateSkills`) has a
+      frontmatter entry in *this* adapter's map — i.e., whether `generateSkills`
+      would succeed without throwing, exposed as a non-throwing predicate. The check
+      itself is agent-agnostic (just "is this key present"), so it's shared across
+      all three despite each adapter's map carrying different extra rendering fields
+      (e.g. Cursor's `globs`). Proven to actually catch drift: calling it with an
+      empty frontmatter map against a real Blueprint correctly reports
+      `valid: false` with a specific issue.
+
+All three initial adapters (`ClaudeAdapter`/`CursorAdapter`/`CodexAdapter`) now
+implement the complete spec §21 `AgentAdapter` interface.
 
 ## Phase 4 — AI Blueprint Generation — **not started**
 

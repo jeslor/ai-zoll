@@ -1,9 +1,13 @@
 import type { ProjectBlueprint } from "@ai-software-zoll/blueprint";
 import type { GeneratedFile } from "@ai-software-zoll/shared";
 import { renderAgentInstructions } from "@ai-software-zoll/generators";
-import type { AgentAdapter } from "../agent-adapter";
-import { generateCursorSkills } from "./generate-cursor-skills";
+import type { AgentAdapter, ValidationResult } from "../agent-adapter";
+import {
+  generateCursorSkills,
+  CURSOR_SKILL_FRONTMATTER,
+} from "./generate-cursor-skills";
 import { renderMdcFrontmatter } from "./mdc-frontmatter";
+import { validateSkillCoverage } from "../validate-skill-coverage";
 
 /**
  * Cursor's current (2026) convention is .cursor/rules/*.mdc — YAML
@@ -36,5 +40,19 @@ export class CursorAdapter implements AgentAdapter {
 
   generateSkills(blueprint: ProjectBlueprint): GeneratedFile[] {
     return generateCursorSkills(blueprint);
+  }
+
+  /**
+   * Cursor's "rules" ARE the .mdc files — already fully used by
+   * generateInstructions (always-applied project.mdc) and generateSkills
+   * (glob-scoped per-skill .mdc). There's no third category of content left
+   * to generate without inventing it, so this returns [].
+   */
+  generateRules(_blueprint: ProjectBlueprint): GeneratedFile[] {
+    return [];
+  }
+
+  validate(blueprint: ProjectBlueprint): ValidationResult {
+    return validateSkillCoverage(blueprint, CURSOR_SKILL_FRONTMATTER);
   }
 }

@@ -10,7 +10,7 @@ import { remapSkillFile } from "../shared-skill-remap";
  * and description. Source:
  * https://www.agensi.io/learn/where-are-codex-cli-skills-stored
  */
-const CODEX_SKILL_FRONTMATTER: Record<string, AgentSkillMeta> = {
+export const CODEX_SKILL_FRONTMATTER: Record<string, AgentSkillMeta> = {
   testing: {
     name: "testing",
     description:

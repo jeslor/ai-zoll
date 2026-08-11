@@ -16,7 +16,7 @@ interface CursorSkillMeta {
  * packages/generators today. Globs are standard Jest/Vitest test-file
  * naming, not Blueprint-derived.
  */
-const CURSOR_SKILL_FRONTMATTER: Record<string, CursorSkillMeta> = {
+export const CURSOR_SKILL_FRONTMATTER: Record<string, CursorSkillMeta> = {
   testing: {
     description:
       "Use when writing or modifying tests, or adding new functionality that requires test coverage.",
