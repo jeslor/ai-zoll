@@ -12,7 +12,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@ai-software-zoll/blueprint": "workspace:^"
+    "@ai-software-zoll/blueprint": "workspace:^",
+    "@anthropic-ai/sdk": "^0.116.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

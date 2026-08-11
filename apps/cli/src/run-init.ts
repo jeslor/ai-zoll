@@ -1,11 +1,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { MockAIProvider } from "@ai-software-zoll/ai";
 import type { BlueprintInput } from "@ai-software-zoll/ai";
 import { generateWorkspace, assertNoDuplicatePaths } from "@ai-software-zoll/generators";
 import type { GeneratedFile } from "@ai-software-zoll/shared";
 import { getAgentAdapter } from "./agent-adapters";
 import type { SupportedAgentId } from "./agent-adapters";
+import { selectAIProvider } from "./select-ai-provider";
 
 export interface RunInitOptions {
   input: BlueprintInput;
@@ -47,7 +47,7 @@ function assertOutputDirIsSafeToWriteTo(outputDir: string): void {
 export async function runInit(options: RunInitOptions): Promise<RunInitResult> {
   const { input, agentId, outputDir } = options;
 
-  const provider = new MockAIProvider();
+  const provider = selectAIProvider();
   const blueprint = await provider.generateBlueprint(input);
 
   const adapter = getAgentAdapter(agentId);

@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { BlueprintInput } from "@ai-software-zoll/ai";
 import { runInit } from "../run-init";
 
@@ -34,12 +34,17 @@ function makeTempDir(): string {
 
 beforeEach(() => {
   tempDirs = [];
+  // These tests exercise the deterministic MockAIProvider path. Clear any
+  // ANTHROPIC_API_KEY from the host shell so a developer's real credential
+  // can't redirect runInit() to a live API call during a test run.
+  vi.stubEnv("ANTHROPIC_API_KEY", "");
 });
 
 afterEach(() => {
   for (const dir of tempDirs) {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+  vi.unstubAllEnvs();
 });
 
 describe("runInit", () => {
