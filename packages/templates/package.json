@@ -1,5 +1,5 @@
 {
-  "name": "@ai-software-zoll/templates",
+  "name": "@ai-zoll/templates",
   "version": "0.0.0",
   "private": true,
   "description": "Raw templates consumed by packages/generators and packages/agents.",

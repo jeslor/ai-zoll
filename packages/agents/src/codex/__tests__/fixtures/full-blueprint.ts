@@ -1,4 +1,4 @@
-import type { ProjectBlueprint } from "@ai-software-zoll/blueprint";
+import type { ProjectBlueprint } from "@ai-zoll/blueprint";
 
 /** Mirrors the spec §4 example verbatim. */
 export const fullBlueprint: ProjectBlueprint = {

@@ -1,10 +1,10 @@
 {
-  "name": "ai-software-zoll",
+  "name": "ai-zoll",
   "version": "0.0.0",
   "private": true,
-  "description": "CLI for AI Software Zoll (npx ai-software-zoll ...).",
+  "description": "CLI for AI Zoll (npx ai-zoll ...).",
   "bin": {
-    "ai-software-zoll": "./dist/index.js"
+    "ai-zoll": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && chmod +x dist/index.js",
@@ -14,11 +14,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@ai-software-zoll/agents": "workspace:^",
-    "@ai-software-zoll/ai": "workspace:^",
-    "@ai-software-zoll/blueprint": "workspace:^",
-    "@ai-software-zoll/generators": "workspace:^",
-    "@ai-software-zoll/shared": "workspace:^",
+    "@ai-zoll/agents": "workspace:^",
+    "@ai-zoll/ai": "workspace:^",
+    "@ai-zoll/blueprint": "workspace:^",
+    "@ai-zoll/generators": "workspace:^",
+    "@ai-zoll/shared": "workspace:^",
     "@inquirer/prompts": "^8.5.2"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-# @ai-software-zoll/generators
+# @ai-zoll/generators
 
 Deterministic template engine: `project/`, `documentation/`, `agent/` generators
 turning a validated `ProjectBlueprint` into `GeneratedFile[]` (README, PROJECT.md,

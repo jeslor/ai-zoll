@@ -1,4 +1,4 @@
-import type { GeneratedFile } from "@ai-software-zoll/shared";
+import type { GeneratedFile } from "@ai-zoll/shared";
 
 export interface AgentSkillMeta {
   name: string;

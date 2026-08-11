@@ -1,6 +1,6 @@
-import type { ProjectBlueprint } from "@ai-software-zoll/blueprint";
-import type { GeneratedFile } from "@ai-software-zoll/shared";
-import { renderAgentInstructions } from "@ai-software-zoll/generators";
+import type { ProjectBlueprint } from "@ai-zoll/blueprint";
+import type { GeneratedFile } from "@ai-zoll/shared";
+import { renderAgentInstructions } from "@ai-zoll/generators";
 import type { AgentAdapter, ValidationResult } from "../agent-adapter";
 import {
   generateClaudeSkills,

@@ -1,5 +1,5 @@
-import type { ProjectBlueprint } from "@ai-software-zoll/blueprint";
-import type { GeneratedFile } from "@ai-software-zoll/shared";
+import type { ProjectBlueprint } from "@ai-zoll/blueprint";
+import type { GeneratedFile } from "@ai-zoll/shared";
 
 /** Result of checking whether an adapter can generate for a given Blueprint. */
 export interface ValidationResult {

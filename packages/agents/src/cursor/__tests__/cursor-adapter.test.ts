@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderAgentInstructions } from "@ai-software-zoll/generators";
+import { renderAgentInstructions } from "@ai-zoll/generators";
 import { CursorAdapter } from "../cursor-adapter";
 import { generateCursorSkills } from "../generate-cursor-skills";
 import { fullBlueprint } from "./fixtures/full-blueprint";

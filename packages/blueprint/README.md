@@ -1,4 +1,4 @@
-# @ai-software-zoll/blueprint
+# @ai-zoll/blueprint
 
 The canonical Project Blueprint: `schemas/` (Zod), `types/`, `validation/`. The single
 source of truth every generator and agent adapter consumes. See

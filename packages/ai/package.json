@@ -1,5 +1,5 @@
 {
-  "name": "@ai-software-zoll/ai",
+  "name": "@ai-zoll/ai",
   "version": "0.0.0",
   "private": true,
   "description": "AIProvider abstraction: mock provider first, real provider later.",
@@ -12,7 +12,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@ai-software-zoll/blueprint": "workspace:^",
+    "@ai-zoll/blueprint": "workspace:^",
     "@anthropic-ai/sdk": "^0.116.0",
     "zod": "^4.4.3"
   },

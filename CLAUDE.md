@@ -4,7 +4,7 @@ Instructions for Claude Code (or any coding agent) working in this repository.
 
 ## What this project is
 
-AI Software Zoll is a platform + CLI that prepares software projects for AI-assisted
+AI Zoll is a platform + CLI that prepares software projects for AI-assisted
 development. It does not write application code for the end user and does not compete
 with Claude Code / Cursor / Codex / Copilot — it generates the **Project Blueprint** and
 the AI-context layer (docs, `AGENTS.md`, skills, agent-specific config) that those tools
@@ -68,7 +68,7 @@ behavior preserved.
 ```
 apps/web        Next.js dashboard
 apps/api        NestJS REST API
-apps/cli        Node/TypeScript CLI (npx ai-software-zoll ...)
+apps/cli        Node/TypeScript CLI (npx ai-zoll ...)
 packages/blueprint    Blueprint schema (Zod), types, validation — the core, agent-agnostic
 packages/generators   Deterministic template engine: blueprint -> workspace files
 packages/agents       AgentAdapter implementations: claude/, cursor/, codex/, copilot/

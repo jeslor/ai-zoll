@@ -1,5 +1,5 @@
-import type { ProjectBlueprint } from "@ai-software-zoll/blueprint";
-import type { GeneratedFile } from "@ai-software-zoll/shared";
+import type { ProjectBlueprint } from "@ai-zoll/blueprint";
+import type { GeneratedFile } from "@ai-zoll/shared";
 import { generateProjectMd } from "./project/generate-project-md";
 import { generateReadmeMd } from "./project/generate-readme-md";
 import { generateArchitectureMd } from "./documentation/generate-architecture-md";

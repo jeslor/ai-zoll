@@ -1,8 +1,8 @@
 {
-  "name": "@ai-software-zoll/api",
+  "name": "@ai-zoll/api",
   "version": "0.0.0",
   "private": true,
-  "description": "NestJS REST API for AI Software Zoll.",
+  "description": "NestJS REST API for AI Zoll.",
   "scripts": {
     "postinstall": "prisma generate",
     "build": "prisma generate && tsc -p tsconfig.json",
@@ -13,7 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@ai-software-zoll/blueprint": "workspace:^",
+    "@ai-zoll/blueprint": "workspace:^",
     "@nestjs/common": "^11.1.29",
     "@nestjs/core": "^11.1.29",
     "@nestjs/platform-express": "^11.1.29",

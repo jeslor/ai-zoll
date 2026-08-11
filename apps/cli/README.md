@@ -1,4 +1,4 @@
-# ai-software-zoll (CLI)
+# ai-zoll (CLI)
 
 Node.js/TypeScript CLI: `init`, `analyze`, `generate`, `sync`, `login`. See
 `docs/PRODUCT_SPEC.md` §22-23 and `docs/plan/03-roadmap.md` Phase 5.

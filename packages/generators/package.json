@@ -1,5 +1,5 @@
 {
-  "name": "@ai-software-zoll/generators",
+  "name": "@ai-zoll/generators",
   "version": "0.0.0",
   "private": true,
   "description": "Deterministic template engine: Blueprint -> generated workspace files.",
@@ -12,8 +12,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@ai-software-zoll/blueprint": "workspace:^",
-    "@ai-software-zoll/shared": "workspace:^"
+    "@ai-zoll/blueprint": "workspace:^",
+    "@ai-zoll/shared": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

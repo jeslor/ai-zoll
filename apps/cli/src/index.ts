@@ -9,7 +9,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log("Usage: ai-software-zoll init");
+  console.log("Usage: ai-zoll init");
   process.exitCode = 1;
 }
 

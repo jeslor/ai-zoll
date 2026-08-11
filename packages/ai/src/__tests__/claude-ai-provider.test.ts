@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
-import { CURRENT_BLUEPRINT_VERSION, BlueprintValidationError } from "@ai-software-zoll/blueprint";
+import { CURRENT_BLUEPRINT_VERSION, BlueprintValidationError } from "@ai-zoll/blueprint";
 import { ClaudeAIProvider } from "../providers/claude-ai-provider";
 import type { BlueprintInput } from "../provider";
 import validInput from "./fixtures/valid-blueprint-input.json";

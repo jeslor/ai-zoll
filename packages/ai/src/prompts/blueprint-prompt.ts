@@ -1,6 +1,6 @@
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { ProjectBlueprintSchema } from "@ai-software-zoll/blueprint";
-import type { BlueprintValidationIssue } from "@ai-software-zoll/blueprint";
+import { ProjectBlueprintSchema } from "@ai-zoll/blueprint";
+import type { BlueprintValidationIssue } from "@ai-zoll/blueprint";
 import type { BlueprintInput } from "../provider";
 
 /**
@@ -26,7 +26,7 @@ export const BLUEPRINT_OUTPUT_FORMAT = zodOutputFormat(
  */
 export function buildSystemPrompt(): string {
   return [
-    "You are the AI Blueprint generator for AI Software Zoll.",
+    "You are the AI Blueprint generator for AI Zoll.",
     "You are given a user's project description plus their explicit structural selections, and must return a complete Blueprint matching the provided schema.",
     "",
     "Hard constraints:",

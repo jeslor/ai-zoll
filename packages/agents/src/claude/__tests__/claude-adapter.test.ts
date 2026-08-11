@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderAgentInstructions, generateAgentsMd } from "@ai-software-zoll/generators";
+import { renderAgentInstructions, generateAgentsMd } from "@ai-zoll/generators";
 import { ClaudeAdapter } from "../claude-adapter";
 import { generateClaudeSkills } from "../generate-claude-skills";
 import { fullBlueprint } from "./fixtures/full-blueprint";

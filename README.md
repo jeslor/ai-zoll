@@ -1,6 +1,6 @@
-# AI Software Zoll
+# AI Zoll
 
-**AI Software Zoll prepares, structures, and maintains the context that AI coding
+**AI Zoll prepares, structures, and maintains the context that AI coding
 agents need to build software effectively.** It does not write your application code —
 Claude Code, Cursor, Codex, and Copilot remain the builders. Zoll prepares the
 environment in which they build.
@@ -27,7 +27,7 @@ current phase and what happens next.
 apps/
   web/       Next.js dashboard
   api/       NestJS REST API
-  cli/       CLI (npx ai-software-zoll ...)
+  cli/       CLI (npx ai-zoll ...)
 packages/
   blueprint/    Canonical Project Blueprint: schema, types, validation (Zod)
   generators/   Deterministic template engine (blueprint -> workspace)

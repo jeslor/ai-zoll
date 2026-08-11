@@ -1,8 +1,8 @@
 import type {
   ArchitectureStyle,
   ProjectBlueprint,
-} from "@ai-software-zoll/blueprint";
-import type { GeneratedFile } from "@ai-software-zoll/shared";
+} from "@ai-zoll/blueprint";
+import type { GeneratedFile } from "@ai-zoll/shared";
 import {
   renderFooter,
   ARCHITECTURE_STYLE_DISPLAY_NAMES,

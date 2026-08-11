@@ -1,5 +1,5 @@
 {
-  "name": "@ai-software-zoll/blueprint",
+  "name": "@ai-zoll/blueprint",
   "version": "0.0.0",
   "private": true,
   "description": "Canonical Project Blueprint: Zod schemas, types, and validation.",

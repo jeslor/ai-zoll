@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { BlueprintInput } from "@ai-software-zoll/ai";
-import { generateWorkspace, assertNoDuplicatePaths } from "@ai-software-zoll/generators";
-import type { GeneratedFile } from "@ai-software-zoll/shared";
+import type { BlueprintInput } from "@ai-zoll/ai";
+import { generateWorkspace, assertNoDuplicatePaths } from "@ai-zoll/generators";
+import type { GeneratedFile } from "@ai-zoll/shared";
 import { getAgentAdapter } from "./agent-adapters";
 import type { SupportedAgentId } from "./agent-adapters";
 import { selectAIProvider } from "./select-ai-provider";
@@ -39,7 +39,7 @@ function assertOutputDirIsSafeToWriteTo(outputDir: string): void {
 }
 
 /**
- * The pure orchestration core of `ai-software-zoll init`: structured answers
+ * The pure orchestration core of `ai-zoll init`: structured answers
  * -> validated Blueprint -> canonical workspace + agent-specific files ->
  * written to disk. No prompt-library dependency, so this is testable
  * without a TTY — see commands/init.ts for the interactive wrapper.

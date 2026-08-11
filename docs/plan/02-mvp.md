@@ -5,7 +5,7 @@
 ## First MVP — new project
 
 ```bash
-npx ai-software-zoll init
+npx ai-zoll init
 ```
 
 Answer: What are you building? Architecture? Stack? Testing? Agent?
@@ -29,7 +29,7 @@ The developer can immediately open the project with their preferred AI coding ag
 
 ```bash
 cd existing-project
-npx ai-software-zoll analyze
+npx ai-zoll analyze
 ```
 
 Zoll detects framework, database, architecture, testing, modules, conventions, then

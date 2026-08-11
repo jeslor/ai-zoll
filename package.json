@@ -1,8 +1,8 @@
 {
-  "name": "ai-software-zoll",
+  "name": "ai-zoll",
   "version": "0.0.0",
   "private": true,
-  "description": "AI Software Zoll monorepo — prepares projects for AI-assisted development.",
+  "description": "AI Zoll monorepo — prepares projects for AI-assisted development.",
   "license": "MIT",
   "engines": {
     "node": ">=20"

@@ -1,4 +1,4 @@
-# @ai-software-zoll/api
+# @ai-zoll/api
 
 NestJS REST API. See `docs/PRODUCT_SPEC.md` §32 and
 `docs/plan/04-database-and-api.md` for the endpoint list and DB model.
@@ -18,7 +18,7 @@ GET    /projects/:id/blueprint
 ```
 
 `POST /projects/:id/blueprint` re-validates the request body server-side via
-`safeParseBlueprint` from `@ai-software-zoll/blueprint` — the same canonical
+`safeParseBlueprint` from `@ai-zoll/blueprint` — the same canonical
 validator every other part of the system uses (Rule 9/ADR 0002) — even though a
 well-behaved caller (an `AIProvider`) already validated it locally. Every write
 creates a new `BlueprintVersion` row (append-only history, per spec §26) and
@@ -37,10 +37,10 @@ upserts the `ProjectBlueprint` "current" row to match.
 1. Set `DATABASE_URL` in `apps/api/.env` (copy `.env.example`) — any Postgres works,
    including a free Neon instance.
 2. `pnpm install` (runs `prisma generate` automatically via `postinstall`).
-3. `pnpm --filter @ai-software-zoll/api exec prisma migrate dev` — creates the
+3. `pnpm --filter @ai-zoll/api exec prisma migrate dev` — creates the
    tables (schema path comes from `apps/api/prisma.config.ts`).
-4. `pnpm --filter @ai-software-zoll/api build && pnpm --filter @ai-software-zoll/api start`
-   — or `pnpm --filter @ai-software-zoll/api dev` (tsc watch) + a separate `start` run.
+4. `pnpm --filter @ai-zoll/api build && pnpm --filter @ai-zoll/api start`
+   — or `pnpm --filter @ai-zoll/api dev` (tsc watch) + a separate `start` run.
 
 Prisma 7 removed `datasource.url` from `schema.prisma` — the CLI reads the
 connection string from `apps/api/prisma.config.ts`, and the running app constructs

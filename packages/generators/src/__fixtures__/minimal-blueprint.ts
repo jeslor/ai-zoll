@@ -1,4 +1,4 @@
-import type { ProjectBlueprint } from "@ai-software-zoll/blueprint";
+import type { ProjectBlueprint } from "@ai-zoll/blueprint";
 
 /** Bare-minimum blueprint: no features, everything else at its plainest. */
 export const minimalBlueprint: ProjectBlueprint = {
