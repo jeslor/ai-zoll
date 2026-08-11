@@ -165,7 +165,28 @@ with Claude Code), then Cursor, then Codex. Do not implement all three at once.
       Splitting `generateInstructions` into multiple concern-scoped files (Cursor's
       own best-practice recommendation) is a deliberate future enhancement, not done
       here.
-- [ ] `CodexAdapter` — next agent, one at a time
+- [x] `CodexAdapter.generateInstructions`/`.generateSkills` (`packages/agents/src/codex/`)
+      — researched Codex's actual convention: Codex reads `AGENTS.md` directly
+      (OpenAI originated the format for Codex, later transferred to the Linux
+      Foundation's Agentic AI Foundation for cross-vendor stewardship), concatenating
+      every `AGENTS.md` from the git root down to the cwd. **`generateInstructions`
+      deliberately returns `[]`** — the canonical `AGENTS.md` `generateAgentsMd`
+      already produces *is* Codex's real instructions file, unmodified; unlike
+      Claude/Cursor, no adapted file is needed. This is a genuine finding validating
+      spec Principle 2 (agent-agnostic), not a stub — covered by a dedicated test.
+      `generateSkills` → `.codex/skills/<id>/SKILL.md`, structurally identical to
+      Claude's convention (`name`/`description` frontmatter, one level deep).
+      Sources: [Custom instructions with AGENTS.md — OpenAI Codex docs](https://developers.openai.com/codex/guides/agents-md),
+      [Where Are Codex CLI Skills Stored?](https://www.agensi.io/learn/where-are-codex-cli-skills-stored).
+      **Refactor:** extracted `packages/agents/src/shared-skill-remap.ts`
+      (`remapSkillFile`) once Claude's and Codex's skill-remap logic turned out
+      structurally identical — `generate-claude-skills.ts` now delegates to it too
+      (verified via unchanged tests/golden files). Cursor's version stays separate;
+      its frontmatter shape genuinely differs.
+
+All three initial adapters (`ClaudeAdapter`/`CursorAdapter`/`CodexAdapter`) now have
+`generateInstructions`+`generateSkills`. `generateRules`/`validate` remain open across
+all three — still no defined shape.
 
 ## Phase 4 — AI Blueprint Generation — **not started**
 
