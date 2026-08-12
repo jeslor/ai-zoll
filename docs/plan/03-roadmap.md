@@ -291,8 +291,26 @@ dashboard-created blueprint). CLI must be usable with zero dashboard involvement
       refusal, invalid-input rejection) without needing a TTY. Verified for real:
       generated actual multi-file project directories on disk for all three agents
       and read the output back.
+- [x] `init` now also registers with `apps/api` when configured — spec §48 step 10
+      ("new-project workflow"), closing the gap between the two now-real pieces.
+      `apps/cli/src/register-with-api.ts`: when `AI_ZOLL_API_URL` is set,
+      `POST /projects` then `POST /projects/:id/blueprint` with the already-
+      validated blueprint, using native `fetch` (no new dependency). Deliberately
+      **no auth** — those endpoints are unauthenticated by design
+      (`Project.userId` is nullable for exactly this reason); `login`/token
+      handling stays a separate future unit for whenever `init <project-id>`
+      needs a real user identity. Env-var-gated and silent when unset (unlike
+      the AI provider choice, this is an opt-in extra, not a capability worth
+      announcing every run); when set, a one-line stderr notice either way.
+      Never fails `init` itself — any API failure (network error, non-2xx) is
+      caught and swallowed, local file generation is unaffected either way.
+      `RunInitResult` gained `projectId: string | null`. Tested fully offline
+      (mocked `fetch`) plus a real round-trip: ran the compiled CLI against a
+      locally-running `apps/api` backed by the live Neon database, confirmed
+      the created `Project`/`ProjectBlueprint` rows are real and retrievable via
+      `GET`, and that local files still write normally regardless.
 - [ ] `init <project-id>` (downloads a dashboard-created blueprint) — needs
-      `apps/api`/`apps/web` first
+      `apps/web` and an auth strategy first
 - [ ] `analyze`, `generate`, `sync`, `login` — later Phase 5/7/9 commands
 
 ## Phase 6 — Dashboard — **not started**
@@ -338,9 +356,9 @@ engine → 5. Generated workspace → 6. First agent adapter → 7. Mock AI prov
 adapters → 15. Blueprint versioning → 16. Sync → 17. Organization mode →
 18. Drift detection.
 
-**Next up:** Phases 1-4 are done; Phase 0 (`apps/api`'s first vertical slice,
-PostgreSQL/Prisma) and Phase 5 (`init`) are substantially in progress. The next
-unstarted step in spec §48's order is step 10, "New-project workflow" — largely
-already satisfied by `apps/cli init` + `apps/api`'s Projects/Blueprint endpoints;
-what's still genuinely open is wiring the CLI's `init <project-id>` to actually call
-the new API, then step 11, `apps/web` (Dashboard).
+**Next up:** Phases 1-4 are done; step 10 ("New-project workflow") is now also
+done — `apps/cli init` and `apps/api`'s Projects/Blueprint endpoints are wired
+together end-to-end (unauthenticated). The next unstarted step in spec §48's order
+is step 11, `apps/web` (Dashboard) — currently a bare placeholder. Auth
+(`login`/`POST /cli/auth`, real `Project.userId` values, `init <project-id>`) is
+still an open decision, deferred until the dashboard or CLI genuinely needs it.
