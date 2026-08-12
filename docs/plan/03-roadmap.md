@@ -18,7 +18,23 @@ Prisma, basic CI. No complex UI yet.
 
 - [x] Documented monorepo skeleton created (this bootstrap pass — folders + placeholder
       `package.json` per package, no framework deps, no business logic)
-- [ ] Real `apps/web` Next.js app scaffolded
+- [x] Real `apps/web` Next.js app scaffolded (`apps/web`, App Router, TypeScript,
+      hand-written like every other package — no `create-next-app`). Next.js
+      16.3.0 / React 19.2.8, `pnpm build`/`dev`/`start` via the real `next` CLI
+      (there's no hand-rolled alternative to a bundler-based framework the way
+      `apps/api`/`apps/cli` avoid `@nestjs/cli`), `typecheck` via plain `tsc
+      --noEmit`, `lint` left as the same "pending Phase 0" placeholder used by
+      the other two apps. One placeholder route (`src/app/page.tsx`) — no
+      dashboard screens yet, that's Phase 6. Real `vitest` + Testing Library
+      smoke test (`src/app/__tests__/page.test.tsx`), matching the "real vitest
+      tests" bar the `apps/cli` scaffold set. Disabled Next 16's new
+      `agentRules` auto-generated `AGENTS.md`/`CLAUDE.md` (`next.config.ts`) —
+      this repo generates those files as a product feature, letting Next
+      silently regenerate its own generic copies on every `next dev` would be
+      actively confusing here. Verified for real: `next build` succeeds,
+      `next dev` serves the page, curled it and confirmed the rendered `<h1>`
+      matches `page.tsx`, and confirmed no `AGENTS.md`/`CLAUDE.md` reappear
+      after a fresh `next dev` run.
 - [x] Real `apps/api` NestJS app scaffolded, with its first real vertical slice:
       `POST/GET /projects`, `GET /projects/:id`, `POST/GET /projects/:id/blueprint`
       (hand-written, no `@nestjs/cli` — plain `tsc` build matching every other
@@ -359,6 +375,12 @@ adapters → 15. Blueprint versioning → 16. Sync → 17. Organization mode →
 **Next up:** Phases 1-4 are done; step 10 ("New-project workflow") is now also
 done — `apps/cli init` and `apps/api`'s Projects/Blueprint endpoints are wired
 together end-to-end (unauthenticated). The next unstarted step in spec §48's order
-is step 11, `apps/web` (Dashboard) — currently a bare placeholder. Auth
+is step 11, `apps/web` (Dashboard) — the Next.js app is now scaffolded (Phase 0)
+but has none of Phase 6's actual screens yet (New Project, Existing Project,
+Project Overview, Blueprint Editor, Agent Selection, Generated Workspace
+Preview). Of those, only New Project / Blueprint Editor / Agent Selection /
+Project Overview have real `apps/api` endpoints to consume today; Existing
+Project and Generated Workspace Preview need `/analysis` and
+`/generate`/`/generated-files`, which don't exist yet. Auth
 (`login`/`POST /cli/auth`, real `Project.userId` values, `init <project-id>`) is
 still an open decision, deferred until the dashboard or CLI genuinely needs it.

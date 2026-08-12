@@ -4,10 +4,26 @@
   "private": true,
   "description": "Next.js dashboard for AI Zoll.",
   "scripts": {
-    "build": "echo \"[web] no app scaffolded yet\"",
-    "dev": "echo \"[web] no app scaffolded yet\"",
-    "lint": "echo \"[web] no app scaffolded yet\"",
-    "test": "echo \"[web] no app scaffolded yet\"",
-    "typecheck": "echo \"[web] no app scaffolded yet\""
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start",
+    "lint": "echo \"[web] lint tooling pending (Phase 0)\"",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "next": "^16.3.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "jsdom": "^30.0.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   }
 }
