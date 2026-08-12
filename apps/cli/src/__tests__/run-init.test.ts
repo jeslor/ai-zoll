@@ -38,6 +38,9 @@ beforeEach(() => {
   // ANTHROPIC_API_KEY from the host shell so a developer's real credential
   // can't redirect runInit() to a live API call during a test run.
   vi.stubEnv("ANTHROPIC_API_KEY", "");
+  // Same guard for API registration — a developer's shell might have this
+  // set for manual testing; these tests must stay offline regardless.
+  vi.stubEnv("AI_ZOLL_API_URL", "");
 });
 
 afterEach(() => {
@@ -142,5 +145,12 @@ describe("runInit", () => {
     });
 
     expect(first.files).toEqual(second.files);
+  });
+
+  it("leaves projectId null when no API URL is configured", async () => {
+    const outputDir = path.join(makeTempDir(), "project");
+    const result = await runInit({ input: fullInput, agentId: "claude", outputDir });
+
+    expect(result.projectId).toBeNull();
   });
 });

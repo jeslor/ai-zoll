@@ -6,6 +6,7 @@ import type { GeneratedFile } from "@ai-zoll/shared";
 import { getAgentAdapter } from "./agent-adapters";
 import type { SupportedAgentId } from "./agent-adapters";
 import { selectAIProvider } from "./select-ai-provider";
+import { registerWithApi } from "./register-with-api";
 
 export interface RunInitOptions {
   input: BlueprintInput;
@@ -16,6 +17,8 @@ export interface RunInitOptions {
 export interface RunInitResult {
   outputDir: string;
   files: GeneratedFile[];
+  /** Set when AI_ZOLL_API_URL is configured and registration succeeded. */
+  projectId: string | null;
 }
 
 /**
@@ -77,5 +80,7 @@ export async function runInit(options: RunInitOptions): Promise<RunInitResult> {
     fs.writeFileSync(fullPath, file.content);
   }
 
-  return { outputDir, files };
+  const projectId = await registerWithApi(blueprint);
+
+  return { outputDir, files, projectId };
 }
