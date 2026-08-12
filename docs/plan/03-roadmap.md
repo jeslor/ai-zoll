@@ -43,16 +43,46 @@ Prisma, basic CI. No complex UI yet.
       not a redefined DTO — every request body is Zod-validated (a small
       hand-written `ZodValidationPipe`, no `class-validator`). Every write creates
       an append-only `BlueprintVersion` row (spec §26) and upserts the
-      `ProjectBlueprint` "current" pointer. `/generate`, `/generated-files`,
-      `/analysis`, `/cli/auth`, `/cli/projects/:id/download` are explicitly
-      deferred (their own future units — need `packages/analyzer`, a real auth
-      strategy, and/or the generation pipeline wired in). Tested with service-level
-      unit tests (fake Prisma) plus an in-memory HTTP e2e suite
+      `ProjectBlueprint` "current" pointer. `/analysis`, `/cli/auth`,
+      `/cli/projects/:id/download` remain explicitly deferred (their own
+      future units — need `packages/analyzer`'s actual analyzer logic and/or
+      a real auth strategy, neither of which exist yet). Tested with
+      service-level unit tests (fake Prisma) plus an in-memory HTTP e2e suite
       (`@nestjs/testing` + `supertest`, fake Prisma, no real DB needed for
       `pnpm test`) — 18 tests total, all offline. Verified for real: ran
       `prisma migrate dev` against a live Neon Postgres database and exercised
       every endpoint (including the 400/404 error paths) with real HTTP requests,
       confirming genuine round-trips through Postgres.
+- [x] `POST /projects/:id/generate` + `GET /projects/:id/generated-files` —
+      the last piece of the vertical slice above, split out once it needed
+      its own package dependencies. Given a project's current (already
+      Zod-validated on write) Blueprint and an `agentId`, re-validates the
+      stored Blueprint (Rule 9 applies to any value flowing into
+      `generateWorkspace`, not just fresh LLM output), runs the same
+      `generateWorkspace` (`@ai-zoll/generators`) + `AgentAdapter`
+      (`@ai-zoll/agents`) pipeline `apps/cli`'s `runInit` uses locally, and
+      persists the result as `GeneratedArtifact` rows — replacing (not
+      accumulating on top of) whatever the project generated last time, and
+      upserting the project's `Agent.primary`. `getAgentAdapter`/
+      `SUPPORTED_AGENT_IDS` moved from being CLI-local
+      (`apps/cli/src/agent-adapters.ts`) to `@ai-zoll/agents` in the process,
+      since both the CLI and the API now need the same "pick an adapter by
+      id" logic — `apps/cli` updated to import it from there instead, no
+      behavior change (all CLI tests still pass). One bug caught by the e2e
+      suite before it shipped: `@UsePipes` at the method level applies to
+      *every* handler parameter, not just `@Body()` — it was validating
+      `@Param("projectId")` (a plain string) against the object-shaped
+      request schema and failing every request. Fixed by scoping
+      `ZodValidationPipe` to the `@Body()` parameter directly. Tested with
+      service-level unit tests (fake Prisma) + e2e HTTP tests (7 new cases
+      covering both endpoints' success/400/404 paths) — 30 tests total in
+      `apps/api` now, still all offline for `pnpm test`. Verified for real:
+      ran the built server against the live Neon database, created a real
+      project + blueprint, called `/generate` for `claude` (11 real files
+      written, content spot-checked), called it again for `cursor` and
+      confirmed the artifacts were fully replaced (no `CLAUDE.md` left over,
+      no duplicate rows), exercised the 400/404 paths with real requests, and
+      cleaned up the test rows afterward.
 - [x] Real `apps/cli` scaffolded — see "Phase 5 — CLI" below for the `init` command
       itself; this checklist item is just the app scaffolding (real `tsc` build,
       executable `dist/index.js` with shebang, real `vitest` tests).
@@ -378,9 +408,11 @@ together end-to-end (unauthenticated). The next unstarted step in spec §48's or
 is step 11, `apps/web` (Dashboard) — the Next.js app is now scaffolded (Phase 0)
 but has none of Phase 6's actual screens yet (New Project, Existing Project,
 Project Overview, Blueprint Editor, Agent Selection, Generated Workspace
-Preview). Of those, only New Project / Blueprint Editor / Agent Selection /
-Project Overview have real `apps/api` endpoints to consume today; Existing
-Project and Generated Workspace Preview need `/analysis` and
-`/generate`/`/generated-files`, which don't exist yet. Auth
+Preview). Of those, New Project / Blueprint Editor / Agent Selection /
+Project Overview / Generated Workspace Preview all now have real `apps/api`
+endpoints to consume (`/projects`, `/projects/:id/blueprint`,
+`/projects/:id/generate`, `/projects/:id/generated-files`); only Existing
+Project remains blocked, on `/analysis` (needs `packages/analyzer`'s actual
+analyzer logic, Phase 7, not started). Auth
 (`login`/`POST /cli/auth`, real `Project.userId` values, `init <project-id>`) is
 still an open decision, deferred until the dashboard or CLI genuinely needs it.

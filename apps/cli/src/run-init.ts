@@ -3,8 +3,8 @@ import * as path from "node:path";
 import type { BlueprintInput } from "@ai-zoll/ai";
 import { generateWorkspace, assertNoDuplicatePaths } from "@ai-zoll/generators";
 import type { GeneratedFile } from "@ai-zoll/shared";
-import { getAgentAdapter } from "./agent-adapters";
-import type { SupportedAgentId } from "./agent-adapters";
+import { getAgentAdapter } from "@ai-zoll/agents";
+import type { SupportedAgentId } from "@ai-zoll/agents";
 import { selectAIProvider } from "./select-ai-provider";
 import { registerWithApi } from "./register-with-api";
 

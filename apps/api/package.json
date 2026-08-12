@@ -13,7 +13,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@ai-zoll/agents": "workspace:^",
     "@ai-zoll/blueprint": "workspace:^",
+    "@ai-zoll/generators": "workspace:^",
+    "@ai-zoll/shared": "workspace:^",
     "@nestjs/common": "^11.1.29",
     "@nestjs/core": "^11.1.29",
     "@nestjs/platform-express": "^11.1.29",

@@ -52,6 +52,18 @@ function fakePrismaService() {
         projectId === "p1" ? { projectId: "p1", data: validBlueprint } : null,
       ),
     },
+    agent: {
+      upsert: vi.fn().mockResolvedValue({ projectId: "p1", primary: "claude" }),
+    },
+    generatedArtifact: {
+      deleteMany: vi.fn().mockResolvedValue({}),
+      createMany: vi.fn().mockResolvedValue({}),
+      findMany: vi
+        .fn()
+        .mockResolvedValue([
+          { id: "a1", projectId: "p1", path: "PROJECT.md", content: "..." },
+        ]),
+    },
   };
 }
 
@@ -136,5 +148,51 @@ describe("apps/api HTTP surface", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ projectId: "p1", data: validBlueprint });
+  });
+
+  it("POST /projects/:id/generate runs the pipeline and returns the resulting artifacts", async () => {
+    const res = await request(app.getHttpServer())
+      .post("/projects/p1/generate")
+      .send({ agentId: "claude" });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual([
+      { id: "a1", projectId: "p1", path: "PROJECT.md", content: "..." },
+    ]);
+  });
+
+  it("POST /projects/:id/generate rejects an unsupported agentId with 400", async () => {
+    const res = await request(app.getHttpServer())
+      .post("/projects/p1/generate")
+      .send({ agentId: "copilot" });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("POST /projects/:id/generate returns 404 for an unknown project", async () => {
+    const res = await request(app.getHttpServer())
+      .post("/projects/missing/generate")
+      .send({ agentId: "claude" });
+
+    expect(res.status).toBe(404);
+  });
+
+  it("GET /projects/:id/generated-files lists the project's generated artifacts", async () => {
+    const res = await request(app.getHttpServer()).get(
+      "/projects/p1/generated-files",
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([
+      { id: "a1", projectId: "p1", path: "PROJECT.md", content: "..." },
+    ]);
+  });
+
+  it("GET /projects/:id/generated-files returns 404 for an unknown project", async () => {
+    const res = await request(app.getHttpServer()).get(
+      "/projects/missing/generated-files",
+    );
+
+    expect(res.status).toBe(404);
   });
 });

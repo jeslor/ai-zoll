@@ -17,9 +17,18 @@ importers:
 
   apps/api:
     dependencies:
+      '@ai-zoll/agents':
+        specifier: workspace:^
+        version: link:../../packages/agents
       '@ai-zoll/blueprint':
         specifier: workspace:^
         version: link:../../packages/blueprint
+      '@ai-zoll/generators':
+        specifier: workspace:^
+        version: link:../../packages/generators
+      '@ai-zoll/shared':
+        specifier: workspace:^
+        version: link:../../packages/shared
       '@nestjs/common':
         specifier: ^11.1.29
         version: 11.1.29(reflect-metadata@0.2.2)(rxjs@7.8.2)

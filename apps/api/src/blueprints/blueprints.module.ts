@@ -7,5 +7,6 @@ import { BlueprintsService } from "./blueprints.service";
   imports: [ProjectsModule],
   controllers: [BlueprintsController],
   providers: [BlueprintsService],
+  exports: [BlueprintsService],
 })
 export class BlueprintsModule {}
