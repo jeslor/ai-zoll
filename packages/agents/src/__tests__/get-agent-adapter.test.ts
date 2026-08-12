@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { ClaudeAdapter, CursorAdapter, CodexAdapter } from "@ai-zoll/agents";
-import { getAgentAdapter, SUPPORTED_AGENT_IDS } from "../agent-adapters";
+import { ClaudeAdapter } from "../claude/claude-adapter";
+import { CursorAdapter } from "../cursor/cursor-adapter";
+import { CodexAdapter } from "../codex/codex-adapter";
+import { getAgentAdapter, SUPPORTED_AGENT_IDS } from "../get-agent-adapter";
 
 describe("getAgentAdapter", () => {
   it("lists exactly the three agents with a real adapter", () => {

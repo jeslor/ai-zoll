@@ -8,9 +8,9 @@ import type {
   ProjectType,
 } from "@ai-zoll/blueprint";
 import type { BlueprintInput } from "@ai-zoll/ai";
+import { SUPPORTED_AGENT_IDS } from "@ai-zoll/agents";
+import type { SupportedAgentId } from "@ai-zoll/agents";
 import { runInit } from "../run-init";
-import { SUPPORTED_AGENT_IDS } from "../agent-adapters";
-import type { SupportedAgentId } from "../agent-adapters";
 
 const PROJECT_TYPES: ProjectType[] = [
   "saas",
