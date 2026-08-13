@@ -36,3 +36,20 @@ optional `--ai` layer's job to interpret this signal set.
   justify.
 - Secret-exclusion (`isExcludedPath`) is enforced wherever an analyzer walks the
   filesystem — see `docs/plan/05-security-and-privacy.md`.
+
+## Dogfooded against a real repo, not just fixtures
+
+`FrameworkAnalyzer` and `DirectoryAnalyzer` were run against a real, unmodified external
+Next.js/React repository (not a fixture written to make a specific test pass), which
+surfaced real gaps fixtures alone hadn't: `DirectoryAnalyzer`'s candidate list was
+originally tuned for backend/DDD-shaped repos only and returned `unknown` for an
+actual, clearly-structured frontend project (`app/`, `components/`, `lib/`, `store/`).
+It's since been expanded (researched, not guessed) to also recognize standard
+React/Next.js folders, Feature-Sliced Design layers, and Atomic Design folders —
+still never classifying `architecture.style` itself, per the ADR 0004 boundary above.
+`FrameworkAnalyzer` gained Nuxt/SvelteKit/Remix/Astro/Svelte (frontend) and
+Koa/Hapi/Hono (backend), each ordered correctly relative to the base framework they
+transitively depend on (e.g. Nuxt before plain Vue). `PackageAnalyzer` also had a
+misleading `unknown` reason fixed — a missing `description` field was reported as "no
+package.json found," even when the file clearly existed (proven by `name` being found
+from that same file).

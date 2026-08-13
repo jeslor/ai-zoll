@@ -112,4 +112,15 @@ describe("analyzePackage", () => {
     expect(result.name.confidence).toBe("unknown");
     expect(result.description.confidence).toBe("unknown");
   });
+
+  it("gives a distinct reason for a missing field vs. a missing file (found via dogfooding — package.json existing and having a name was previously misreported as 'no package.json found' for the unrelated missing description field)", () => {
+    const dir = seed({ "package.json": JSON.stringify({ name: "acme-billing-service" }) });
+
+    const result = analyzePackage(dir);
+
+    expect(result.name.confidence).toBe("detected");
+    expect(result.description.confidence).toBe("unknown");
+    expect(result.description.reason).not.toContain("no package.json found");
+    expect(result.description.reason).toContain("package.json exists");
+  });
 });

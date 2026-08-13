@@ -524,6 +524,25 @@ required" product direction, not a blocker to calling this phase usable.
       `ai-zoll sync cursor` worked immediately on the adopted project (switching
       agents, still preserving the hand-written `README.md` throughout), and confirmed
       re-running `analyze` on the now-adopted directory correctly refuses.
+- [x] Post-launch dogfooding pass against a real, unmodified external repository (not
+      a synthetic fixture) — cloned a real Next.js 16 + React 19 frontend app and ran
+      the full pipeline against it, which surfaced three real gaps no fixture had:
+      (1) `DirectoryAnalyzer`'s candidate list was backend/DDD-only and returned
+      `unknown` for this repo's genuinely well-structured `app/`/`components/`/`lib/`/
+      `store/` layout — researched and expanded to also recognize standard
+      React/Next.js folders, Feature-Sliced Design layers, and Atomic Design folders
+      (still never classifying `architecture.style` itself, per ADR 0004); (2)
+      `FrameworkAnalyzer` was missing Nuxt/SvelteKit/Remix/Astro/Svelte and
+      Koa/Hapi/Hono, added with correct most-specific-first ordering (e.g. Nuxt before
+      plain Vue, mirroring the existing Next.js-before-React precedent); (3) a
+      misleading `PackageAnalyzer` message reported a missing `description` field as
+      "no package.json found" even when the file demonstrably existed (`name` was
+      found from that same file) — fixed to distinguish the two cases. Also fixed,
+      found via the same pass: the CLI's database prompt had no `"none"` choice
+      (unlike frontend/backend/orm), forcing a frontend-only project with no database
+      into a dishonest `"other"`. 9 new tests, 73 total in `packages/analyzer` now.
+      Re-cloned the same real repo after the fixes and confirmed all three findings
+      resolved for real, not just in the fixture suite.
 
 ## Phase 8 — Existing Project AI Layer — **not started**
 

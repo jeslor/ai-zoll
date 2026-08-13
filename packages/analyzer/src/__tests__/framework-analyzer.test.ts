@@ -82,6 +82,50 @@ describe("analyzeFramework", () => {
     expect(analyzeFramework(fastifyDir).backend.value).toBe("fastify");
   });
 
+  it("detects Koa, Hapi, and Hono", () => {
+    expect(analyzeFramework(seed({ "package.json": JSON.stringify({ dependencies: { koa: "^2.15.0" } }) })).backend.value).toBe("koa");
+    expect(
+      analyzeFramework(seed({ "package.json": JSON.stringify({ dependencies: { "@hapi/hapi": "^21.3.0" } }) }))
+        .backend.value,
+    ).toBe("hapi");
+    expect(analyzeFramework(seed({ "package.json": JSON.stringify({ dependencies: { hono: "^4.0.0" } }) })).backend.value).toBe("hono");
+  });
+
+  it("detects Nuxt, not plain vue, even though vue is also present as a transitive-style dep", () => {
+    const dir = seed({
+      "package.json": JSON.stringify({ dependencies: { nuxt: "^3.11.0", vue: "^3.4.0" } }),
+    });
+
+    expect(analyzeFramework(dir).frontend.value).toBe("nuxt");
+  });
+
+  it("detects SvelteKit, not plain svelte, even though svelte is also present", () => {
+    const dir = seed({
+      "package.json": JSON.stringify({ devDependencies: { "@sveltejs/kit": "^2.5.0", svelte: "^4.2.0" } }),
+    });
+
+    expect(analyzeFramework(dir).frontend.value).toBe("sveltekit");
+  });
+
+  it("detects Remix, not plain react, even though react is also present", () => {
+    const dir = seed({
+      "package.json": JSON.stringify({ dependencies: { "@remix-run/react": "^2.9.0", react: "^18.3.0" } }),
+    });
+
+    expect(analyzeFramework(dir).frontend.value).toBe("remix");
+  });
+
+  it("detects Astro and plain Svelte", () => {
+    expect(
+      analyzeFramework(seed({ "package.json": JSON.stringify({ dependencies: { astro: "^4.7.0" } }) }))
+        .frontend.value,
+    ).toBe("astro");
+    expect(
+      analyzeFramework(seed({ "package.json": JSON.stringify({ dependencies: { svelte: "^4.2.0" } }) }))
+        .frontend.value,
+    ).toBe("svelte");
+  });
+
   it("returns unknown for a monorepo root with no recognized dependencies", () => {
     const dir = seed({
       "package.json": JSON.stringify({
