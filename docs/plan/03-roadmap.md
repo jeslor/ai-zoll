@@ -317,6 +317,14 @@ JSON Schema).
 
 ## Phase 5 — CLI — **in progress**
 
+> **Scope pivot (this session):** the product direction narrowed to a fully
+> self-contained CLI — `apps/web`/`apps/api` are out of active scope, and the
+> CLI now defaults to **zero AI/LLM calls, ever** (see the `--ai` note below).
+> This supersedes the "CLI must be usable with zero dashboard involvement"
+> framing below with something stronger: the CLI has no dashboard/API
+> dependency to begin with. `apps/web`/`apps/api`'s existing code is left
+> in place, not deleted, but isn't being actively built on right now.
+
 `npx ai-zoll init` (interactive), then `init <project-id>` (downloads a
 dashboard-created blueprint). CLI must be usable with zero dashboard involvement.
 
@@ -325,9 +333,9 @@ dashboard-created blueprint). CLI must be usable with zero dashboard involvement
       init.ts`) collects a structured `BlueprintInput` (project/architecture/stack/
       testing/security, plus which of the three real agents —
       `claude`/`cursor`/`codex`; `copilot` isn't offered since there's no
-      `CopilotAdapter` yet) → `selectAIProvider().generateBlueprint` (real
-      `ClaudeAIProvider` when `ANTHROPIC_API_KEY` is set, else `MockAIProvider` —
-      see Phase 4) → `adapter.validate` (first real caller of the Phase 3 `validate`
+      `CopilotAdapter` yet) → `selectAIProvider(useAI).generateBlueprint`
+      (`MockAIProvider` by default — see the `--ai` opt-in item below — see
+      Phase 4) → `adapter.validate` (first real caller of the Phase 3 `validate`
       work) →
       `generateWorkspace` + the chosen `AgentAdapter`'s `generateInstructions`/
       `generateSkills`/`generateRules`, merged and `assertNoDuplicatePaths`-checked
@@ -355,9 +363,49 @@ dashboard-created blueprint). CLI must be usable with zero dashboard involvement
       locally-running `apps/api` backed by the live Neon database, confirmed
       the created `Project`/`ProjectBlueprint` rows are real and retrievable via
       `GET`, and that local files still write normally regardless.
+- [x] `--ai` becomes a strict, explicit opt-in for the real `ClaudeAIProvider`
+      (`apps/cli/src/select-ai-provider.ts`) — no more auto-detecting
+      `ANTHROPIC_API_KEY` and silently switching providers. `MockAIProvider`
+      (deterministic, zero network calls) is the only default now, regardless
+      of whether a key is present in the shell; a discoverability notice is
+      printed when a key is set but unused. `--ai` with no key throws a clear
+      error rather than silently degrading to Mock. Threaded through
+      `RunInitOptions.useAI` → `commands/init.ts` → `index.ts`'s `process.argv`
+      parsing (no arg-parser library, matching repo convention).
+- [x] `sync [agent]` — regenerates an already-initialized project's files,
+      either re-syncing with the current agent or switching to a different
+      one, entirely offline (zero AI). Three new modules in `apps/cli/src/`:
+      `managed-content.ts` (wraps every generated file's content in
+      `<!-- ai-zoll:managed:start/end -->` markers; hand-written content below
+      the markers is preserved verbatim across every future regeneration —
+      pure string functions, no fs), `project-state.ts` (persists
+      `.ai-zoll/state.json` — the Blueprint plus the last-generated path
+      list — committed to git, re-validated via `safeParseBlueprint` on every
+      read since a human can hand-edit it), and `run-sync.ts` (the
+      orchestration: reconciles orphaned files *before* writing new ones,
+      deleting only files with no real custom content and leaving anything
+      else — including symlinks and files whose markers are missing/malformed
+      — untouched and reported back rather than guessed at). `getAgentAdapter`/
+      `SUPPORTED_AGENT_IDS` reused from `@ai-zoll/agents` (already promoted
+      there for the `apps/api` `/generate` work). `init` now writes every file
+      pre-wrapped and a `state.json` from its first run, so a project has what
+      `sync` needs from day one. 53 tests in `apps/cli` (up from 17), covering
+      the merge algorithm's edge cases (missing vs. malformed markers, custom
+      zones containing marker-like text, multiple marker occurrences),
+      `state.json` failure modes (missing/corrupt/version-mismatched), and
+      `run-sync` end-to-end (same-agent no-op resync, custom content surviving
+      a resync, full agent switch with `AGENTS.md` proven agent-invariant,
+      an outgoing file with real custom content preserved not deleted, a
+      symlinked path left untouched, a directory occupying a wanted path
+      preserved-with-warning instead of crashing). Verified for real: built
+      the CLI, ran `init` into a scratch directory for Claude, hand-appended a
+      note below `CLAUDE.md`'s marker, ran `sync cursor`, confirmed `CLAUDE.md`
+      survived with the note intact, `.claude/` was removed, `.cursor/rules/*`
+      was created, `AGENTS.md` was untouched, and `state.json` reflected the
+      new agent — plus a same-agent `sync` and an unsupported-agent error path.
 - [ ] `init <project-id>` (downloads a dashboard-created blueprint) — needs
       `apps/web` and an auth strategy first
-- [ ] `analyze`, `generate`, `sync`, `login` — later Phase 5/7/9 commands
+- [ ] `analyze`, `login` — later Phase 5/7 commands (`sync` is now done, see above)
 
 ## Phase 6 — Dashboard — **not started**
 

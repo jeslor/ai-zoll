@@ -2,19 +2,25 @@ import { ClaudeAIProvider, MockAIProvider } from "@ai-zoll/ai";
 import type { AIProvider } from "@ai-zoll/ai";
 
 /**
- * Picks the real, LLM-backed provider when Claude credentials are available
- * (`ANTHROPIC_API_KEY`, matching the Anthropic SDK's own env convention),
- * otherwise falls back to the deterministic MockAIProvider so `init` still
- * works with zero setup. A one-line stderr notice on the fallback path keeps
- * that choice visible rather than silent.
+ * MockAIProvider (deterministic, zero network calls) is the only default —
+ * the real, LLM-backed ClaudeAIProvider is opt-in only, via `useAI`, never
+ * auto-triggered just because ANTHROPIC_API_KEY happens to be set in the
+ * shell. Explicit `--ai` + no key throws rather than silently degrading to
+ * Mock, since silently substituting a different provider than the one
+ * explicitly requested would be a worse surprise than an error.
  */
-export function selectAIProvider(): AIProvider {
-  if (process.env.ANTHROPIC_API_KEY) {
+export function selectAIProvider(useAI: boolean): AIProvider {
+  if (useAI) {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error("--ai requires ANTHROPIC_API_KEY to be set.");
+    }
     return new ClaudeAIProvider();
   }
 
-  console.error(
-    "No ANTHROPIC_API_KEY set — using MockAIProvider (deterministic, no AI-generated features).",
-  );
+  if (process.env.ANTHROPIC_API_KEY) {
+    console.error(
+      "ANTHROPIC_API_KEY is set but not used — pass --ai to enable AI-assisted feature generation.",
+    );
+  }
   return new MockAIProvider();
 }

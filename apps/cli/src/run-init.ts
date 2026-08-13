@@ -7,11 +7,15 @@ import { getAgentAdapter } from "@ai-zoll/agents";
 import type { SupportedAgentId } from "@ai-zoll/agents";
 import { selectAIProvider } from "./select-ai-provider";
 import { registerWithApi } from "./register-with-api";
+import { mergeManagedContent } from "./managed-content";
+import { writeProjectState } from "./project-state";
 
 export interface RunInitOptions {
   input: BlueprintInput;
   agentId: SupportedAgentId;
   outputDir: string;
+  /** Opt into the real, LLM-backed AIProvider. Defaults to false (MockAIProvider). */
+  useAI?: boolean;
 }
 
 export interface RunInitResult {
@@ -48,9 +52,9 @@ function assertOutputDirIsSafeToWriteTo(outputDir: string): void {
  * without a TTY — see commands/init.ts for the interactive wrapper.
  */
 export async function runInit(options: RunInitOptions): Promise<RunInitResult> {
-  const { input, agentId, outputDir } = options;
+  const { input, agentId, outputDir, useAI = false } = options;
 
-  const provider = selectAIProvider();
+  const provider = selectAIProvider(useAI);
   const blueprint = await provider.generateBlueprint(input);
 
   const adapter = getAgentAdapter(agentId);
@@ -69,16 +73,30 @@ export async function runInit(options: RunInitOptions): Promise<RunInitResult> {
     ...adapter.generateSkills(blueprint),
     ...adapter.generateRules(blueprint),
   ];
-  const files = [...canonicalFiles, ...agentFiles];
-  assertNoDuplicatePaths(files);
+  const rawFiles = [...canonicalFiles, ...agentFiles];
+  assertNoDuplicatePaths(rawFiles);
 
   assertOutputDirIsSafeToWriteTo(outputDir);
+
+  // Every file starts wrapped in managed-region markers (a brand new file has
+  // no prior content, so this is always the "created" merge outcome) — so a
+  // project already has the markers `sync` looks for from its very first
+  // generation, not retrofitted later.
+  const files: GeneratedFile[] = rawFiles.map((file) => ({
+    path: file.path,
+    content: mergeManagedContent(undefined, file.content).content,
+  }));
 
   for (const file of files) {
     const fullPath = path.join(outputDir, file.path);
     fs.mkdirSync(path.dirname(fullPath), { recursive: true });
     fs.writeFileSync(fullPath, file.content);
   }
+
+  writeProjectState(outputDir, {
+    blueprint,
+    generatedPaths: files.map((file) => file.path),
+  });
 
   const projectId = await registerWithApi(blueprint);
 
