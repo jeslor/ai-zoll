@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { BlueprintInput } from "@ai-zoll/ai";
 import { runInit } from "../run-init";
+import { readProjectState } from "../project-state";
 
 const fullInput: BlueprintInput = {
   project: {
@@ -76,7 +77,20 @@ describe("runInit", () => {
       path.join(outputDir, "CLAUDE.md"),
       "utf-8",
     );
-    expect(claudeMdOnDisk.startsWith("# CLAUDE.md")).toBe(true);
+    expect(claudeMdOnDisk.startsWith("<!-- ai-zoll:managed:start -->")).toBe(true);
+    expect(claudeMdOnDisk).toContain("# CLAUDE.md");
+  });
+
+  it("writes .ai-zoll/state.json that round-trips the blueprint and file list", async () => {
+    const outputDir = path.join(makeTempDir(), "project");
+    const result = await runInit({ input: fullInput, agentId: "claude", outputDir });
+
+    const state = readProjectState(outputDir);
+
+    expect(state.blueprint.project.name).toBe("SaaS CRM");
+    expect(state.generatedPaths.sort()).toEqual(
+      result.files.map((file) => file.path).sort(),
+    );
   });
 
   it("writes Cursor-specific files (.mdc, not .claude/)", async () => {

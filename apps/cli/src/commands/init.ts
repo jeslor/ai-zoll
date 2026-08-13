@@ -115,7 +115,11 @@ async function promptForBlueprintInput(): Promise<BlueprintInput> {
   };
 }
 
-export async function runInitCommand(): Promise<void> {
+export interface RunInitCommandOptions {
+  useAI: boolean;
+}
+
+export async function runInitCommand(options: RunInitCommandOptions): Promise<void> {
   const blueprintInput = await promptForBlueprintInput();
 
   const agentId = (await select({
@@ -130,7 +134,12 @@ export async function runInitCommand(): Promise<void> {
     default: toKebabCase(blueprintInput.project.name),
   });
 
-  const result = await runInit({ input: blueprintInput, agentId, outputDir });
+  const result = await runInit({
+    input: blueprintInput,
+    agentId,
+    outputDir,
+    useAI: options.useAI,
+  });
 
   console.log(
     `\nGenerated ${result.files.length} files in ${result.outputDir}/\n`,

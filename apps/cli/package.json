@@ -19,7 +19,8 @@
     "@ai-zoll/blueprint": "workspace:^",
     "@ai-zoll/generators": "workspace:^",
     "@ai-zoll/shared": "workspace:^",
-    "@inquirer/prompts": "^8.5.2"
+    "@inquirer/prompts": "^8.5.2",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
