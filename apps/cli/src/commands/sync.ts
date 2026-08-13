@@ -1,6 +1,7 @@
 import { SUPPORTED_AGENT_IDS } from "@ai-zoll/agents";
 import type { SupportedAgentId } from "@ai-zoll/agents";
 import { runSync } from "../run-sync";
+import { printApplyResult } from "../print-apply-result";
 
 function isSupportedAgentId(value: string): value is SupportedAgentId {
   return (SUPPORTED_AGENT_IDS as readonly string[]).includes(value);
@@ -21,20 +22,5 @@ export async function runSyncCommand(agentArg: string | undefined): Promise<void
   const result = await runSync({ projectDir: process.cwd(), agentId: agentArg });
 
   console.log(`Synced for agent "${result.agentId}":`);
-  if (result.created.length > 0) {
-    console.log(`  Created:`);
-    for (const p of result.created) console.log(`    + ${p}`);
-  }
-  if (result.updated.length > 0) {
-    console.log(`  Updated:`);
-    for (const p of result.updated) console.log(`    ~ ${p}`);
-  }
-  if (result.deleted.length > 0) {
-    console.log(`  Deleted:`);
-    for (const p of result.deleted) console.log(`    - ${p}`);
-  }
-  if (result.preserved.length > 0) {
-    console.log(`  Preserved (left untouched):`);
-    for (const p of result.preserved) console.log(`    ! ${p.path} — ${p.reason}`);
-  }
+  printApplyResult(result);
 }

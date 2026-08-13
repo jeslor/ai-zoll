@@ -427,9 +427,7 @@ modifies application source code at this stage.
       exclusion via `isExcludedPath`; structured findings only, no prose). Each maps
       directly to an existing `ProjectBlueprint` field — `project.name/description`,
       `stack.frontend/backend`, `stack.database/orm`, `testing.unit/integration/e2e` —
-      no schema changes needed. `GitAnalyzer`/`DependencyAnalyzer`/`DirectoryAnalyzer`
-      (the architecture-style heuristic) and the `analyze` CLI command itself are the
-      next steps, not built yet. Repo-root only for v1 — no monorepo/workspace
+      no schema changes needed. Repo-root only for v1 — no monorepo/workspace
       awareness (documented once in `packages/analyzer/README.md`, not repeated per
       analyzer); Node/TypeScript ecosystem only.
       `DatabaseAnalyzer`'s Prisma detection scopes its regex to the `datasource { ... }`
@@ -449,6 +447,38 @@ modifies application source code at this stage.
       the stated root-only limitation (this repo's actual frontend/backend frameworks
       live in `apps/web`/`apps/api`, not the root `package.json`, so they correctly
       report `unknown`).
+- [x] `packages/analyzer` second slice — `GitAnalyzer`, `DependencyAnalyzer`,
+      `DirectoryAnalyzer`, extending `analyzeRepository()` to all seven analyzers from
+      spec §14's named list. Only the `analyze` CLI command itself remains — the next
+      step, not built yet. A design review against `docs/decisions/
+      0004-deterministic-vs-ai-boundary.md` changed the original sketch materially:
+      the ADR explicitly assigns "directory detection" to the deterministic side and
+      "architecture reasoning" to the AI-assisted side, so `DirectoryAnalyzer` does
+      **not** classify `architecture.style` from folder names (the original plan) —
+      it reports which known convention directory names exist as raw facts
+      (`signals: Finding<string[]>`) and stops there, guarded by a test that fails if
+      the result ever contains an architecture-style value. `architecture.style`
+      remains the user's direct choice in the CLI wizard (spec §7), or a future
+      optional `--ai` layer's job — the concrete first instance of "AI improves
+      output, never required" from this session's product-direction discussion.
+      `GitAnalyzer` reads `.git/config` directly by exact path (same targeted-read
+      pattern `DatabaseAnalyzer` already uses for `prisma/schema.prisma`, not the
+      traversal-only `isExcludedPath` gate) for a host-agnostic remote-URL-derived
+      `project.name` fallback, plus an independent directory-structure-based monorepo
+      signal deliberately not reconciled with `PackageAnalyzer`'s own (different)
+      monorepo signal — combining multiple analyzers' findings into one answer is a
+      later "assemble Blueprint from analysis" stage's job. `DependencyAnalyzer` maps
+      a narrow, reviewed list of authentication/authorization packages to
+      `security.authentication/authorization`, always `likely` (never `detected` —
+      inferring a mechanism from a dependency list is inherently indirect), checking
+      strategy-specific `passport-*` packages before the less-informative bare
+      `passport`. 24 new tests (63 total in `packages/analyzer` now). Verified for
+      real: re-ran `analyzeRepository('.')` against this repo's own root — correctly
+      derived `project.name` "ai-zoll" from the real git remote, correctly detected
+      the real `apps/*`/`packages/*` monorepo layout, and correctly reported
+      `unknown` for dependency/directory signals (root `package.json` has no
+      auth-related deps, root has no `src/domain` etc. — the same honest root-only
+      limitation as the first slice, working as designed).
 
 ## Phase 8 — Existing Project AI Layer — **not started**
 

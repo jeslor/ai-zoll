@@ -3,10 +3,20 @@
 Deterministic repository analyzers for the existing-project workflow.
 See `docs/PRODUCT_SPEC.md` §13-17 and `docs/plan/03-roadmap.md` Phase 7.
 
-**Status:** first slice built — `PackageAnalyzer`, `FrameworkAnalyzer`, `DatabaseAnalyzer`,
-`TestAnalyzer`, combined by `analyzeRepository()`. `GitAnalyzer`, `DependencyAnalyzer`,
-and `DirectoryAnalyzer` (the architecture-style heuristic) are not built yet — see
-`.claude/skills/add-repo-analyzer/SKILL.md` before adding one.
+**Status:** all seven analyzers from spec §14's named list are built — `PackageAnalyzer`,
+`FrameworkAnalyzer`, `DatabaseAnalyzer`, `TestAnalyzer`, `GitAnalyzer`,
+`DependencyAnalyzer`, `DirectoryAnalyzer`, combined by `analyzeRepository()`. The
+`ai-zoll analyze` CLI command that consumes this package doesn't exist yet — see
+`.claude/skills/add-repo-analyzer/SKILL.md` before adding another analyzer.
+
+**`DirectoryAnalyzer` does not classify `architecture.style`.** `docs/decisions/
+0004-deterministic-vs-ai-boundary.md` explicitly puts "directory detection" on the
+deterministic side and "architecture reasoning" on the AI-assisted side — deciding that
+`domain/`+`application/`+`infrastructure/` directories *mean* "domain-driven-design" is
+reasoning about what a fact implies, not the fact itself. This analyzer reports which
+known convention directory names exist (`signals: Finding<string[]>`) and stops there;
+`architecture.style` remains the user's direct choice in the CLI wizard, or a future
+optional `--ai` layer's job to interpret this signal set.
 
 ## v1 scope, stated explicitly
 

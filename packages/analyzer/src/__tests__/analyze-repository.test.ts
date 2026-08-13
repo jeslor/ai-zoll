@@ -27,7 +27,7 @@ describe("analyzeRepository", () => {
       "package.json": JSON.stringify({
         name: "acme-api",
         description: "Acme's core API service",
-        dependencies: { "@nestjs/core": "^10.0.0" },
+        dependencies: { "@nestjs/core": "^10.0.0", jsonwebtoken: "^9.0.0" },
         devDependencies: { jest: "^29.0.0" },
       }),
       "prisma/schema.prisma": `
@@ -36,6 +36,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 `,
+      ".git/config": '[remote "origin"]\n\turl = git@github.com:acme/api-service.git\n',
+      "src/domain/.gitkeep": "",
+      "src/infrastructure/.gitkeep": "",
     });
 
     const result = analyzeRepository(dir);
@@ -45,5 +48,8 @@ datasource db {
     expect(result.database.orm.value).toBe("prisma");
     expect(result.database.database.value).toBe("postgresql");
     expect(result.testing.unit.value).toBe(true);
+    expect(result.git.projectName.value).toBe("api-service");
+    expect(result.dependency.authentication.value).toBe("jwt");
+    expect(result.directory.signals.value?.sort()).toEqual(["domain", "infrastructure"]);
   });
 });

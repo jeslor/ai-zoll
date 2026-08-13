@@ -13,5 +13,14 @@ export type { DatabaseAnalyzerResult } from "./database-analyzer";
 export { analyzeTests } from "./test-analyzer";
 export type { TestAnalyzerResult } from "./test-analyzer";
 
+export { analyzeGit } from "./git-analyzer";
+export type { GitAnalyzerResult } from "./git-analyzer";
+
+export { analyzeDependencies } from "./dependency-analyzer";
+export type { DependencyAnalyzerResult } from "./dependency-analyzer";
+
+export { analyzeDirectory } from "./directory-analyzer";
+export type { DirectoryAnalyzerResult } from "./directory-analyzer";
+
 export { analyzeRepository } from "./analyze-repository";
 export type { RepositoryAnalysis } from "./analyze-repository";

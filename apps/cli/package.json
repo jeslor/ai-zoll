@@ -16,6 +16,7 @@
   "dependencies": {
     "@ai-zoll/agents": "workspace:^",
     "@ai-zoll/ai": "workspace:^",
+    "@ai-zoll/analyzer": "workspace:^",
     "@ai-zoll/blueprint": "workspace:^",
     "@ai-zoll/generators": "workspace:^",
     "@ai-zoll/shared": "workspace:^",
