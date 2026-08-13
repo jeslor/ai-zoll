@@ -1,5 +1,9 @@
 # AI Zoll
 
+<p align="center">
+  <img src="assets/ai_zoll.png" alt="AI Zoll — AI-ready project structure" width="420" />
+</p>
+
 **AI Zoll prepares, structures, and maintains the context that AI coding
 agents need to build software effectively.** It does not write your application code —
 Claude Code, Cursor, Codex, and Copilot remain the builders. Zoll prepares the
