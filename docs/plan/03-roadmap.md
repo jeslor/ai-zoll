@@ -413,11 +413,42 @@ New Project / Existing Project flows, Project Overview, Blueprint Editor, Agent
 Selection, Generated Workspace Preview. Consumes the same blueprint APIs as the CLI —
 built only after Phases 1-2 exist, not before.
 
-## Phase 7 — Existing Project Analysis — **not started**
+## Phase 7 — Existing Project Analysis — **in progress**
 
 `npx ai-zoll analyze`. Deterministic analyzers first (see
-`packages/analyzer`), then AI interpretation on top. Never modifies application source
-code at this stage.
+`packages/analyzer`), then AI interpretation on top (opt-in via the same `--ai` flag
+`init` uses — real, not required; improves output, never a hard dependency). Never
+modifies application source code at this stage.
+
+- [x] `packages/analyzer` first slice — `PackageAnalyzer`, `FrameworkAnalyzer`,
+      `DatabaseAnalyzer`, `TestAnalyzer`, combined by `analyzeRepository()`, following
+      `.claude/skills/add-repo-analyzer/SKILL.md`'s established convention (three-tier
+      `Confidence` — `detected`/`likely`/`unknown`, not a numeric score; secret
+      exclusion via `isExcludedPath`; structured findings only, no prose). Each maps
+      directly to an existing `ProjectBlueprint` field — `project.name/description`,
+      `stack.frontend/backend`, `stack.database/orm`, `testing.unit/integration/e2e` —
+      no schema changes needed. `GitAnalyzer`/`DependencyAnalyzer`/`DirectoryAnalyzer`
+      (the architecture-style heuristic) and the `analyze` CLI command itself are the
+      next steps, not built yet. Repo-root only for v1 — no monorepo/workspace
+      awareness (documented once in `packages/analyzer/README.md`, not repeated per
+      analyzer); Node/TypeScript ecosystem only.
+      `DatabaseAnalyzer`'s Prisma detection scopes its regex to the `datasource { ... }`
+      block specifically (a schema's `generator` block also has its own unrelated
+      `provider` field) and skips `//`-commented lines within it, so a commented-out
+      alternate provider left for reference isn't false-matched.
+      `TestAnalyzer` checks three independent signal classes (devDependencies,
+      `scripts.test` excluding the npm-init placeholder, and a bounded/exclusion-aware
+      file walk) before reporting a confident "no tests at all" — evidence for one
+      test type never implies a false negative for another. 39 tests, all fixture-based
+      (drawn from a design review against realistic Node/TS project shapes — monorepo
+      roots, mid-ORM-migration repos, the npm-init placeholder trap). Verified for
+      real: ran `analyzeRepository()` against this monorepo's own root, which caught a
+      genuine gap during development (pnpm's `pnpm-workspace.yaml` wasn't recognized as
+      a monorepo-root signal, only npm/yarn's `workspaces` field was) — fixed and
+      re-verified against this repo's own root, which is itself a live demonstration of
+      the stated root-only limitation (this repo's actual frontend/backend frameworks
+      live in `apps/web`/`apps/api`, not the root `package.json`, so they correctly
+      report `unknown`).
 
 ## Phase 8 — Existing Project AI Layer — **not started**
 
