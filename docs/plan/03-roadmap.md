@@ -11,7 +11,7 @@ and generator (Phases 1-2) exist.
 
 `not started` · `in progress` · `done`
 
-## Phase 0 — Product Foundation — **in progress**
+## Phase 0 — Product Foundation — **done**
 
 Monorepo, TypeScript, pnpm, Turborepo, web app, API, CLI, shared packages, PostgreSQL,
 Prisma, basic CI. No complex UI yet.
@@ -97,7 +97,21 @@ Prisma, basic CI. No complex UI yet.
       `prisma`/`@prisma/client` are also listed in the repo root's
       `package.json`, and why the client generates into `apps/api/generated/`
       instead of `node_modules/@prisma/client`).
-- [ ] CI actually runs meaningful typecheck/lint/test (currently placeholder-safe)
+- [x] CI actually runs meaningful build/typecheck/lint/test — turned out to already be
+      mostly true (`.github/workflows/ci.yml` has run `typecheck`/`lint`/`test` via
+      `turbo` since the very first bootstrap commit; an earlier session mistakenly
+      reported this as still pending after a truncated file read, corrected here).
+      What was genuinely missing: an explicit `Build` step (previously `build` only
+      ran implicitly as a `^build` dependency of `typecheck`/`test` in `turbo.json`,
+      never verified directly as its own CI step — added). `turbo.json`'s `test` task
+      also declared a `coverage/**` output nothing has ever produced (no package runs
+      vitest with `--coverage`) — removed the stale declaration rather than bolt on
+      an unrequested coverage-reporting pipeline. Verified for real: ran the exact
+      `pnpm install --frozen-lockfile` → `pnpm run build` → `pnpm run typecheck` →
+      `pnpm run lint` → `pnpm run test` sequence CI runs, locally, with no
+      `DATABASE_URL` set (matching a clean CI environment — `apps/api`'s tests use a
+      fake/mocked Prisma, no live database needed) — all green, 275 tests passing
+      across every package.
 
 ## Phase 1 — Blueprint Engine — **done**
 
@@ -413,12 +427,16 @@ New Project / Existing Project flows, Project Overview, Blueprint Editor, Agent
 Selection, Generated Workspace Preview. Consumes the same blueprint APIs as the CLI —
 built only after Phases 1-2 exist, not before.
 
-## Phase 7 — Existing Project Analysis — **in progress**
+## Phase 7 — Existing Project Analysis — **deterministic path done, AI enhancement not started**
 
 `npx ai-zoll analyze`. Deterministic analyzers first (see
 `packages/analyzer`), then AI interpretation on top (opt-in via the same `--ai` flag
 `init` uses — real, not required; improves output, never a hard dependency). Never
-modifies application source code at this stage.
+modifies application source code at this stage. The command is fully usable end-to-end
+today on the deterministic path alone (see the last checkbox below); what's left is
+spec §16's optional AI-assisted layer (business domains, modules, undocumented
+conventions) — genuinely optional per this session's "AI improves output, never
+required" product direction, not a blocker to calling this phase usable.
 
 - [x] `packages/analyzer` first slice — `PackageAnalyzer`, `FrameworkAnalyzer`,
       `DatabaseAnalyzer`, `TestAnalyzer`, combined by `analyzeRepository()`, following
@@ -479,6 +497,33 @@ modifies application source code at this stage.
       `unknown` for dependency/directory signals (root `package.json` has no
       auth-related deps, root has no `src/domain` etc. — the same honest root-only
       limitation as the first slice, working as designed).
+- [x] `ai-zoll analyze` — closes the phase. `analyzeRepository()` (`@ai-zoll/analyzer`)
+      → interactive resolution of each Blueprint field (`detected` → used directly,
+      `likely` → confirm-or-decline, `unknown` → the same field prompts `init` uses,
+      refactored out of its monolithic wizard into `apps/cli/src/commands/prompts.ts`
+      so `analyze` can call only the ones it actually needs) → the same
+      `generateWorkspace` + `AgentAdapter` pipeline `init`/`sync` already use → the
+      same merge-aware writer `sync` built, extracted from `run-sync.ts` into
+      `apps/cli/src/apply-generated-files.ts` (a second consumer, not new logic —
+      `run-sync.ts`'s own 9 tests still pass unchanged, proving the extraction
+      preserved behavior exactly). Refuses to run on an already-`.ai-zoll`-initialized
+      directory, pointing to `sync` instead. `architecture.style` is never resolved
+      from analysis — always prompted, per `DirectoryAnalyzer`'s ADR-0004-driven scope
+      (`directory.signals`, if present, is shown as a plain informational line above
+      the prompt, never wired to a default). 4 new tests in `run-analyze.test.ts`,
+      including the load-bearing one: a directory with a genuine hand-written
+      `README.md` and real `src/index.ts` stays byte-for-byte untouched after
+      `runAnalyze`, reported in `preserved` rather than silently overwritten (Rule 10,
+      exercised directly for this command, not just inherited by assumption). Verified
+      for real, not just fixtures: built the CLI, created a synthetic existing-project
+      scratch directory (real `package.json` with NestJS/Prisma/Postgres/JWT/Vitest
+      signals, a real hand-written `README.md`, real `src/index.ts` "application
+      code"), ran the full non-interactive pipeline against it — confirmed the
+      analysis report was accurate, confirmed `README.md` and `src/index.ts` were
+      byte-for-byte unchanged on disk after generation, confirmed a subsequent
+      `ai-zoll sync cursor` worked immediately on the adopted project (switching
+      agents, still preserving the hand-written `README.md` throughout), and confirmed
+      re-running `analyze` on the now-adopted directory correctly refuses.
 
 ## Phase 8 — Existing Project AI Layer — **not started**
 

@@ -5,9 +5,11 @@ See `docs/PRODUCT_SPEC.md` §13-17 and `docs/plan/03-roadmap.md` Phase 7.
 
 **Status:** all seven analyzers from spec §14's named list are built — `PackageAnalyzer`,
 `FrameworkAnalyzer`, `DatabaseAnalyzer`, `TestAnalyzer`, `GitAnalyzer`,
-`DependencyAnalyzer`, `DirectoryAnalyzer`, combined by `analyzeRepository()`. The
-`ai-zoll analyze` CLI command that consumes this package doesn't exist yet — see
-`.claude/skills/add-repo-analyzer/SKILL.md` before adding another analyzer.
+`DependencyAnalyzer`, `DirectoryAnalyzer`, combined by `analyzeRepository()`. Consumed
+by the real `ai-zoll analyze` CLI command (`apps/cli/src/commands/analyze.ts` +
+`run-analyze.ts`) — existing-project support is usable end-to-end on the deterministic
+path today. See `.claude/skills/add-repo-analyzer/SKILL.md` before adding another
+analyzer.
 
 **`DirectoryAnalyzer` does not classify `architecture.style`.** `docs/decisions/
 0004-deterministic-vs-ai-boundary.md` explicitly puts "directory detection" on the
