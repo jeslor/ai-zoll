@@ -1,36 +1,20 @@
-import { input, select, checkbox } from "@inquirer/prompts";
-import {
-  ARCHITECTURE_STYLE_DISPLAY_NAMES,
-  ARCHITECTURE_STYLE_EXPLANATIONS,
-} from "@ai-zoll/generators";
-import type {
-  ArchitectureStyle,
-  ProjectType,
-} from "@ai-zoll/blueprint";
+import { input } from "@inquirer/prompts";
 import type { BlueprintInput } from "@ai-zoll/ai";
-import { SUPPORTED_AGENT_IDS } from "@ai-zoll/agents";
-import type { SupportedAgentId } from "@ai-zoll/agents";
 import { runInit } from "../run-init";
-
-const PROJECT_TYPES: ProjectType[] = [
-  "saas",
-  "web-application",
-  "api",
-  "mobile-backend",
-  "ecommerce",
-  "internal-tool",
-  "ai-application",
-  "cli",
-  "other",
-];
-
-const ARCHITECTURE_STYLES: ArchitectureStyle[] = [
-  "modular",
-  "layered",
-  "clean-architecture",
-  "hexagonal",
-  "domain-driven-design",
-];
+import {
+  promptAgent,
+  promptArchitectureStyle,
+  promptAuthentication,
+  promptAuthorization,
+  promptBackend,
+  promptDatabase,
+  promptFrontend,
+  promptOrm,
+  promptProjectDescription,
+  promptProjectName,
+  promptProjectType,
+  promptTestingTypes,
+} from "./prompts";
 
 function toKebabCase(name: string): string {
   return (
@@ -42,74 +26,27 @@ function toKebabCase(name: string): string {
 }
 
 async function promptForBlueprintInput(): Promise<BlueprintInput> {
-  const name = await input({ message: "Project name:" });
-  const description = await input({ message: "What are you building?" });
+  const name = await promptProjectName();
+  const description = await promptProjectDescription();
+  const type = await promptProjectType();
+  const architectureStyle = await promptArchitectureStyle();
 
-  const type = (await select({
-    message: "Project type:",
-    choices: PROJECT_TYPES.map((value) => ({ name: value, value })),
-    default: "saas",
-  })) as ProjectType;
+  const frontend = await promptFrontend();
+  const backend = await promptBackend();
+  const database = await promptDatabase();
+  const orm = await promptOrm();
 
-  const architectureStyle = (await select({
-    message: "Architecture style:",
-    choices: ARCHITECTURE_STYLES.map((value) => ({
-      name: ARCHITECTURE_STYLE_DISPLAY_NAMES[value],
-      value,
-      description: ARCHITECTURE_STYLE_EXPLANATIONS[value],
-    })),
-    default: "modular",
-  })) as ArchitectureStyle;
+  const testing = await promptTestingTypes();
 
-  const frontend = await select({
-    message: "Frontend:",
-    choices: ["nextjs", "react", "vue", "angular", "none"],
-    default: "nextjs",
-  });
-  const backend = await select({
-    message: "Backend:",
-    choices: ["nestjs", "express", "fastify", "django", "fastapi", "none"],
-    default: "nestjs",
-  });
-  const database = await select({
-    message: "Database:",
-    choices: ["postgresql", "mysql", "mongodb", "sqlite", "redis", "other"],
-    default: "postgresql",
-  });
-  const orm = await select({
-    message: "ORM:",
-    choices: ["prisma", "drizzle", "typeorm", "sqlalchemy", "none"],
-    default: "prisma",
-  });
-
-  const testingTypes = await checkbox({
-    message: "Which testing types do you want?",
-    choices: [
-      { name: "Unit", value: "unit", checked: true },
-      { name: "Integration", value: "integration", checked: true },
-      { name: "E2E", value: "e2e", checked: false },
-    ],
-  });
-
-  const authentication = await input({
-    message: "Authentication mechanism (or 'none'):",
-    default: "jwt",
-  });
-  const authorization = await input({
-    message: "Authorization mechanism (or 'none'):",
-    default: "rbac",
-  });
+  const authentication = await promptAuthentication();
+  const authorization = await promptAuthorization();
 
   return {
     project: { name, description, type },
     architecture: { style: architectureStyle },
     stack: { frontend, backend, database, orm },
     features: [],
-    testing: {
-      unit: testingTypes.includes("unit"),
-      integration: testingTypes.includes("integration"),
-      e2e: testingTypes.includes("e2e"),
-    },
+    testing,
     security: { authentication, authorization },
     agent: { primary: "claude" }, // overwritten below once the agent is chosen
   };
@@ -122,11 +59,7 @@ export interface RunInitCommandOptions {
 export async function runInitCommand(options: RunInitCommandOptions): Promise<void> {
   const blueprintInput = await promptForBlueprintInput();
 
-  const agentId = (await select({
-    message: "Primary AI coding agent:",
-    choices: SUPPORTED_AGENT_IDS.map((value) => ({ name: value, value })),
-    default: "claude",
-  })) as SupportedAgentId;
+  const agentId = await promptAgent();
   blueprintInput.agent = { primary: agentId };
 
   const outputDir = await input({

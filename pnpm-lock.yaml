@@ -90,6 +90,9 @@ importers:
       '@ai-zoll/ai':
         specifier: workspace:^
         version: link:../../packages/ai
+      '@ai-zoll/analyzer':
+        specifier: workspace:^
+        version: link:../../packages/analyzer
       '@ai-zoll/blueprint':
         specifier: workspace:^
         version: link:../../packages/blueprint
