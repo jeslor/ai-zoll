@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./finding";
+import { discoverWorkspacePackages } from "./workspace-discovery";
 
 export interface GitAnalyzerResult {
   /** Fallback candidate for project.name — never authoritative. */
@@ -63,22 +64,15 @@ function extractRepoName(url: string): string | null {
   return lastSegment && lastSegment.length > 0 ? lastSegment : null;
 }
 
+/**
+ * Delegates to workspace-discovery.ts, which also recognizes custom glob
+ * roots declared in pnpm-workspace.yaml/package.json's "workspaces" field
+ * beyond the original apps/*, packages/* defaults — an intentional, minor
+ * enhancement over this function's original behavior, not a silent change:
+ * nothing that was previously `true` can become `false`, only the reverse.
+ */
 function hasMonorepoDirectoryLayout(repoPath: string): boolean {
-  for (const parent of ["apps", "packages"]) {
-    const parentPath = path.join(repoPath, parent);
-    let entries: fs.Dirent[];
-    try {
-      entries = fs.readdirSync(parentPath, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-    for (const entry of entries) {
-      if (entry.isDirectory() && fs.existsSync(path.join(parentPath, entry.name, "package.json"))) {
-        return true;
-      }
-    }
-  }
-  return false;
+  return discoverWorkspacePackages(repoPath).length > 0;
 }
 
 /**

@@ -543,6 +543,42 @@ required" product direction, not a blocker to calling this phase usable.
       into a dishonest `"other"`. 9 new tests, 73 total in `packages/analyzer` now.
       Re-cloned the same real repo after the fixes and confirmed all three findings
       resolved for real, not just in the fixture suite.
+- [x] Monorepo/workspace-aware analysis — the best-evidenced remaining gap, closed:
+      this very `ai-zoll` repo (a real pnpm monorepo) previously returned `unknown`
+      for `framework`/`database`/`orm` at its own root, since those signals live in
+      `apps/web`/`apps/api`, not the root `package.json`. New
+      `packages/analyzer/src/workspace-discovery.ts` finds subpackages under
+      `apps/*`/`packages/*` (directory-walk is the actual discovery mechanism, same as
+      before) plus any custom glob roots declared in `pnpm-workspace.yaml`/
+      `package.json`'s `workspaces` field (narrow hand-written parsing, no YAML/glob
+      library — `!`-prefixed exclusion globs are recognized and skipped, never given
+      real filter semantics, a deliberate scope cut from a design review rather than
+      an oversight). `FrameworkAnalyzer`/`DatabaseAnalyzer`/`TestAnalyzer`/
+      `DependencyAnalyzer`/`DirectoryAnalyzer` are unchanged — each already accepted an
+      arbitrary path — only `analyzeRepository()` (the orchestrator) changed, now
+      running each against the root and every discovered subpackage and merging with
+      one of three distinct strategies in new `merge-findings.ts` (categorical fields
+      like framework/database report `unknown` with every disagreeing source's value
+      enumerated rather than silently picking one — no majority voting, and
+      `unknown`-confidence sources like a frameworkless library subpackage are
+      excluded from voting entirely, not treated as a non-match; boolean testing
+      fields use OR/union semantics but the reason text always enumerates full
+      per-source coverage, never just the source that said yes, so "has tests
+      somewhere" can't be mistaken for "has tests"; array directory signals are a
+      straight union, since different subpackages having different conventions is
+      expected, not a conflict). `PackageAnalyzer` and `GitAnalyzer.projectName` stay
+      root-only by design — a monorepo's overall name is inherently a root-level
+      concept. Every merge function guarantees an exact, byte-for-byte passthrough
+      when only one location was ever checked, which is why all 101 pre-existing
+      analyzer tests kept passing completely unchanged through this work — only new,
+      genuine multi-package fixtures exercise the new merge logic. 28 new tests, 101
+      total in `packages/analyzer` now. Verified for real: re-ran
+      `analyzeRepository('.')` against this actual repo's own root post-fix and
+      confirmed `frontend: nextjs` (from `apps/web`), `backend: nestjs`/
+      `database: postgresql`/`orm: prisma` (from `apps/api`), and unit testing
+      correctly attributed across all 11 real packages in this repo — a direct
+      resolution of the exact gap that motivated this work, not just a fixture-level
+      proof.
 
 ## Phase 8 — Existing Project AI Layer — **not started**
 
