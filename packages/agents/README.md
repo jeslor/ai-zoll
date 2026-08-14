@@ -4,5 +4,6 @@
 `codex/`, `copilot/`. See `docs/PRODUCT_SPEC.md` §21 and
 `docs/decisions/0003-agent-adapter-pattern.md`.
 
-**Status:** not yet implemented (placeholder package). Build one adapter at a time —
-see `docs/plan/03-roadmap.md` Phase 3 and `.claude/skills/add-agent-adapter/SKILL.md`.
+**Status:** all four adapters implemented and tested — see `docs/plan/03-roadmap.md`
+Phase 3. For future adapter candidates (Cline, Zed, ...) see
+`docs/decisions/0003-agent-adapter-pattern.md`'s "Future adapter candidates" section.

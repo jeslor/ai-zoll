@@ -77,6 +77,22 @@ describe("analyzeTests", () => {
     });
   });
 
+  it("recognizes NestJS's official hyphenated e2e-spec naming convention (found via dogfooding against a real NestJS backend)", () => {
+    // Deliberately not inside a directory named test/tests/__tests__ — this
+    // isolates the file-naming-pattern fix from the (already-covered)
+    // directory-name signal, which would otherwise mask the same gap.
+    const dir = seed({
+      "package.json": JSON.stringify({ name: "acme-api" }),
+      "e2e/app.e2e-spec.ts": "describe('AppController (e2e)', () => {});",
+    });
+
+    expect(analyzeTests(dir).unit).toEqual({
+      value: true,
+      confidence: "likely",
+      reason: expect.stringContaining("test files"),
+    });
+  });
+
   it("does not treat the npm-init placeholder test script as evidence of real tests", () => {
     const dir = seed({
       "package.json": JSON.stringify({

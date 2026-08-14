@@ -2,14 +2,13 @@ import type { AgentAdapter } from "./agent-adapter";
 import { ClaudeAdapter } from "./claude/claude-adapter";
 import { CursorAdapter } from "./cursor/cursor-adapter";
 import { CodexAdapter } from "./codex/codex-adapter";
+import { CopilotAdapter } from "./copilot/copilot-adapter";
 
 /**
- * Only the agents with a real adapter are offered — the Blueprint schema's
- * agent.primary enum also allows "copilot", but there's no CopilotAdapter
- * yet, so offering it here would produce a dead-end (agent-agnostic output
- * only, no agent-specific files) without explaining why.
+ * Every agent named in the Blueprint schema's agent.primary enum now has a
+ * real adapter.
  */
-export const SUPPORTED_AGENT_IDS = ["claude", "cursor", "codex"] as const;
+export const SUPPORTED_AGENT_IDS = ["claude", "cursor", "codex", "copilot"] as const;
 
 export type SupportedAgentId = (typeof SUPPORTED_AGENT_IDS)[number];
 
@@ -21,5 +20,7 @@ export function getAgentAdapter(agentId: SupportedAgentId): AgentAdapter {
       return new CursorAdapter();
     case "codex":
       return new CodexAdapter();
+    case "copilot":
+      return new CopilotAdapter();
   }
 }

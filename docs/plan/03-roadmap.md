@@ -7,6 +7,18 @@ Rule 1 applies to this whole document: do not start a phase before the previous 
 done, and do not jump straight to the dashboard (Phase 6) before the Blueprint engine
 and generator (Phases 1-2) exist.
 
+> **Product pivot: CLI-only.** `apps/web` (Dashboard) and `apps/api` (REST API +
+> Postgres) were built, tested, verified against a live database — and then
+> **deliberately removed**. AI Zoll is now a fully self-contained CLI: no server, no
+> database, no dashboard. The Phase 0 / Phase 6 entries below are kept as an honest
+> historical record of what was built and why (useful context, not something to erase),
+> but they no longer describe current or planned work. Phases 9 ("Sync" in its original
+> remote-Blueprint-diff sense), 10 (Organizations), and 11 (Drift Detection) all
+> presupposed the dashboard/API and are now out of scope entirely, not just deferred —
+> see each phase's status line below. The CLI's own `sync` command (Phase 5) already
+> covers the "keep context in sync" need this pivot actually cares about, without any
+> of that infrastructure.
+
 ## Status legend
 
 `not started` · `in progress` · `done`
@@ -265,9 +277,28 @@ with Claude Code), then Cursor, then Codex. Do not implement all three at once.
       structurally identical — `generate-claude-skills.ts` now delegates to it too
       (verified via unchanged tests/golden files). Cursor's version stays separate;
       its frontmatter shape genuinely differs.
+- [x] `CopilotAdapter.generateInstructions`/`.generateSkills` (`packages/agents/src/
+      copilot/`) — researched GitHub Copilot's actual (2026) convention: a
+      repo-wide `.github/copilot-instructions.md` plus path-specific
+      `.github/instructions/*.instructions.md` files carrying `applyTo` glob
+      frontmatter (comma-separated globs, e.g. `applyTo: "**/*.ts,**/*.tsx"`).
+      Source: [Adding custom instructions for GitHub Copilot](https://docs.github.com/copilot/customizing-copilot/adding-custom-instructions-for-github-copilot).
+      `generateInstructions` → one `.github/copilot-instructions.md` (reuses
+      `renderAgentInstructions`, same as Claude/Cursor). `generateSkills` → one
+      `.instructions.md` per canonical skill under `.github/instructions/`, via a
+      new `copilot-frontmatter.ts` (hand-written `applyTo` YAML, no library
+      dependency, same precedent as `mdc-frontmatter.ts`) and
+      `generate-copilot-skills.ts` (`COPILOT_SKILL_FRONTMATTER` map + throw-on-
+      unmapped-id, same pattern as Claude/Cursor/Codex). Wired into
+      `SUPPORTED_AGENT_IDS`/`getAgentAdapter` — `apps/cli`'s `promptAgent` needed
+      zero changes since it derives its choices from `SUPPORTED_AGENT_IDS`
+      directly. Verified for real: ran `runInit` end-to-end targeting
+      `agentId: "copilot"` and inspected the actual on-disk
+      `.github/copilot-instructions.md` and `.github/instructions/
+      testing.instructions.md` output.
 
-- [x] `generateRules` for all three adapters — researched each agent's actual "rules"
-      concept rather than guessing, and all three return `[]`, each for a different,
+- [x] `generateRules` for all four adapters — researched each agent's actual "rules"
+      concept rather than guessing, and all four return `[]`, each for a different,
       sourced reason: **Claude** has a real `.claude/rules/` mechanism (glob-scoped
       `.md`, added early 2026) but nothing in the current Blueprint is genuinely
       pattern-scoped convention data — the only candidate content is already
@@ -278,19 +309,30 @@ with Claude Code), then Cursor, then Codex. Do not implement all three at once.
       inventing content. **Codex** has no separate rules concept at all — OpenAI's
       own guidance recommends `AGENTS.md`/checked-in docs instead
       ([source](https://www.codegateway.dev/en/blog/openai-codex-cli-complete-guide-2026)).
-- [x] `validate` for all three adapters — shared `validateSkillCoverage`
+      **Copilot**'s path-specific `.instructions.md` files are already its full
+      "rules" mechanism, fully used by `generateSkills` — same reasoning as Cursor.
+- [x] `validate` for all four adapters — shared `validateSkillCoverage`
       (`packages/agents/src/validate-skill-coverage.ts`), checking whether every
       skill a Blueprint triggers (via `packages/generators`' `generateSkills`) has a
       frontmatter entry in *this* adapter's map — i.e., whether `generateSkills`
       would succeed without throwing, exposed as a non-throwing predicate. The check
       itself is agent-agnostic (just "is this key present"), so it's shared across
-      all three despite each adapter's map carrying different extra rendering fields
-      (e.g. Cursor's `globs`). Proven to actually catch drift: calling it with an
-      empty frontmatter map against a real Blueprint correctly reports
-      `valid: false` with a specific issue.
+      all four despite each adapter's map carrying different extra rendering fields
+      (e.g. Cursor's `globs`, Copilot's `applyTo`). Proven to actually catch drift:
+      calling it with an empty frontmatter map against a real Blueprint correctly
+      reports `valid: false` with a specific issue.
+- [x] **Future adapter candidates researched and documented, not built** — spec §21
+      requires the adapter pattern to scale to agents beyond the initial four
+      without touching the Blueprint or generator core; see
+      `docs/decisions/0003-agent-adapter-pattern.md`'s "Future adapter candidates"
+      section for the full 2026 landscape survey (Cline, Zed, and why several
+      once-obvious candidates — Gemini CLI, Amazon Q, Windsurf — are no longer
+      live targets). Deliberately scoped down to research + documentation only
+      this session, not implementation (Rule 1) — each real candidate adapter is
+      its own future task.
 
-All three initial adapters (`ClaudeAdapter`/`CursorAdapter`/`CodexAdapter`) now
-implement the complete spec §21 `AgentAdapter` interface.
+All four adapters (`ClaudeAdapter`/`CursorAdapter`/`CodexAdapter`/`CopilotAdapter`)
+now implement the complete spec §21 `AgentAdapter` interface.
 
 ## Phase 4 — AI Blueprint Generation — **done**
 
@@ -321,9 +363,12 @@ JSON Schema).
   11 tests total in the package): the Anthropic client is injected via the
   constructor and tests use a minimal fake (`{ messages: { parse: vi.fn() } }`) — no
   real network calls, no `ANTHROPIC_API_KEY` needed to run `pnpm test`.
-- Wired into the CLI: `apps/cli/src/select-ai-provider.ts` picks `ClaudeAIProvider`
-  when `ANTHROPIC_API_KEY` is set, else falls back to `MockAIProvider` with a stderr
-  notice — `run-init.ts` no longer hardcodes `MockAIProvider`.
+- Wired into the CLI via `apps/cli/src/select-ai-provider.ts` — `run-init.ts` no
+  longer hardcodes `MockAIProvider`. **Superseded by the Phase 5 `--ai` opt-in item
+  below**: this originally auto-selected `ClaudeAIProvider` whenever
+  `ANTHROPIC_API_KEY` was present in the shell; that auto-detection was later
+  replaced with a strict, explicit `--ai` flag (see Phase 5) — `selectAIProvider`
+  now takes a `useAI: boolean` parameter instead of reading the env var itself.
 - `analyzeRepository`/`generateProjectContext` remain out of scope (Phase 7/8 — no
   `RepositoryProfile`/`RepositoryAnalysis`/`ProjectContext` shape exists yet).
 - No live API call was made as part of verification (offline tests only, by choice);
@@ -345,9 +390,10 @@ dashboard-created blueprint). CLI must be usable with zero dashboard involvement
 - [x] `init` (interactive, no project-id) — **this is spec §41's MVP milestone,
       concretely realized**: `@inquirer/prompts` wizard (`apps/cli/src/commands/
       init.ts`) collects a structured `BlueprintInput` (project/architecture/stack/
-      testing/security, plus which of the three real agents —
-      `claude`/`cursor`/`codex`; `copilot` isn't offered since there's no
-      `CopilotAdapter` yet) → `selectAIProvider(useAI).generateBlueprint`
+      testing/security, plus which agent to target — `promptAgent` derives its
+      choices directly from `SUPPORTED_AGENT_IDS`, so `claude`/`cursor`/`codex`/
+      `copilot` are all offered with zero prompt-code changes needed when
+      `CopilotAdapter` was added in Phase 3) → `selectAIProvider(useAI).generateBlueprint`
       (`MockAIProvider` by default — see the `--ai` opt-in item below — see
       Phase 4) → `adapter.validate` (first real caller of the Phase 3 `validate`
       work) →
@@ -359,24 +405,15 @@ dashboard-created blueprint). CLI must be usable with zero dashboard involvement
       refusal, invalid-input rejection) without needing a TTY. Verified for real:
       generated actual multi-file project directories on disk for all three agents
       and read the output back.
-- [x] `init` now also registers with `apps/api` when configured — spec §48 step 10
-      ("new-project workflow"), closing the gap between the two now-real pieces.
-      `apps/cli/src/register-with-api.ts`: when `AI_ZOLL_API_URL` is set,
-      `POST /projects` then `POST /projects/:id/blueprint` with the already-
-      validated blueprint, using native `fetch` (no new dependency). Deliberately
-      **no auth** — those endpoints are unauthenticated by design
-      (`Project.userId` is nullable for exactly this reason); `login`/token
-      handling stays a separate future unit for whenever `init <project-id>`
-      needs a real user identity. Env-var-gated and silent when unset (unlike
-      the AI provider choice, this is an opt-in extra, not a capability worth
-      announcing every run); when set, a one-line stderr notice either way.
-      Never fails `init` itself — any API failure (network error, non-2xx) is
-      caught and swallowed, local file generation is unaffected either way.
-      `RunInitResult` gained `projectId: string | null`. Tested fully offline
-      (mocked `fetch`) plus a real round-trip: ran the compiled CLI against a
-      locally-running `apps/api` backed by the live Neon database, confirmed
-      the created `Project`/`ProjectBlueprint` rows are real and retrievable via
-      `GET`, and that local files still write normally regardless.
+- ~~`init` now also registers with `apps/api` when configured~~ — **removed as part
+      of the CLI-only pivot.** This existed briefly (`apps/cli/src/
+      register-with-api.ts`: `POST /projects` + `POST /projects/:id/blueprint` via
+      `fetch` when `AI_ZOLL_API_URL` was set) but depended entirely on `apps/api`,
+      which has since been deleted along with `apps/web` and `prisma/` (see the
+      scope-pivot note at the top of this phase). `register-with-api.ts` and its
+      test were deleted, `run-init.ts`'s `RunInitResult` no longer carries a
+      `projectId` field, and `RunInitResult` is now just `{ outputDir, files }`.
+      Kept here as a historical record, not silently dropped from the log.
 - [x] `--ai` becomes a strict, explicit opt-in for the real `ClaudeAIProvider`
       (`apps/cli/src/select-ai-provider.ts`) — no more auto-detecting
       `ANTHROPIC_API_KEY` and silently switching providers. `MockAIProvider`
@@ -421,11 +458,13 @@ dashboard-created blueprint). CLI must be usable with zero dashboard involvement
       `apps/web` and an auth strategy first
 - [ ] `analyze`, `login` — later Phase 5/7 commands (`sync` is now done, see above)
 
-## Phase 6 — Dashboard — **not started**
+## Phase 6 — Dashboard — **out of scope (CLI-only pivot)**
 
 New Project / Existing Project flows, Project Overview, Blueprint Editor, Agent
-Selection, Generated Workspace Preview. Consumes the same blueprint APIs as the CLI —
-built only after Phases 1-2 exist, not before.
+Selection, Generated Workspace Preview. `apps/web` was actually scaffolded at one
+point (Next.js, App Router) but was removed along with `apps/api` when the product
+pivoted to CLI-only — see the note at the top of this document. Not "not started
+yet," genuinely not planned under the current direction.
 
 ## Phase 7 — Existing Project Analysis — **deterministic path done, AI enhancement not started**
 
@@ -579,6 +618,29 @@ required" product direction, not a blocker to calling this phase usable.
       correctly attributed across all 11 real packages in this repo — a direct
       resolution of the exact gap that motivated this work, not just a fixture-level
       proof.
+- [x] Third dogfooding pass, against a real NestJS backend (dual passport strategies,
+      Prisma+Postgres, Jest with a `test:e2e` script) — found and fixed two more real
+      gaps. `DirectoryAnalyzer.signals` returned `unknown` despite the repo having a
+      completely standard structure (`Auth/`, `booking/`, `conversation/` — one folder
+      per business *domain*, not per *layer*), so no directory name in the candidate
+      list matched; fixed by adding a second signal source, file-naming *suffixes*
+      (`Name.controller.ts`, `Name.service.ts`, `Name.module.ts`, ...), found via the
+      same bounded/exclusion-aware walk `TestAnalyzer` already uses — still a raw fact,
+      not a classification, per the same ADR 0004 boundary. `TestAnalyzer`'s file
+      pattern also only recognized the dot-separated convention and missed NestJS's own
+      official hyphenated `*.e2e-spec.ts` convention (this repo's `test:e2e` script
+      happened to mask the gap via a different signal; a repo without that script
+      would've been missed) — fixed to recognize both separators. Also confirmed a
+      designed, not accidental, behavior for real: this repo has *two* passport
+      strategies (`passport-jwt` + `passport-google-oauth20`) simultaneously, and
+      `DependencyAnalyzer` correctly picked the first-checked one per its documented
+      first-match-wins order, not a bug. 4 new tests, 103 total in `packages/analyzer`.
+      Verified for real: rebuilt, re-ran `analyzeRepository()` against the same cloned
+      repo, confirmed `directory.signals` now reports `controller, module, service,
+      dto, guard, strategy, entity`; ran the full `runAnalyze` pipeline against it,
+      confirmed the repo's real hand-written `README.md` and real application source
+      stayed byte-for-byte untouched, and confirmed a subsequent `sync cursor` worked
+      on the adopted project.
 
 ## Phase 8 — Existing Project AI Layer — **not started**
 
@@ -586,15 +648,18 @@ Generate `AGENTS.md`, `PROJECT.md`, `ARCHITECTURE.md`, `CONVENTIONS.md`, `skills
 agent-specific config around an existing repo. Preserve existing source. Idempotent —
 running twice must not duplicate files.
 
-## Phase 9 — Sync — **not started**
+## Phase 9 — Sync (original meaning: local/remote Blueprint diff) — **out of scope (CLI-only pivot)**
 
-`npx ai-zoll sync`. Compare local Blueprint, remote Blueprint, local AI
-context; show a diff before applying anything.
+`npx ai-zoll sync` — but *this specific name is already taken* by a different,
+already-shipped feature (Phase 5): local re-sync/agent-switching, no remote Blueprint
+involved at all, since there's no server to hold one. This phase's original meaning
+(diffing a local Blueprint against a dashboard-stored remote one) presupposed
+`apps/web`/`apps/api`, which no longer exist — genuinely out of scope, not deferred.
 
-## Phase 10 — Organizations — **not started**
+## Phase 10 — Organizations — **out of scope (CLI-only pivot)**
 
-Only after individual (single-developer) workflows are validated. Organizations,
-Teams, Shared Standards, Project Templates, Roles.
+Organizations, Teams, Shared Standards, Project Templates, Roles all presuppose a
+multi-user server/dashboard, which no longer exists.
 
 ## Phase 11 — Drift Detection — **not started**
 

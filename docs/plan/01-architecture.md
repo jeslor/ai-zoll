@@ -1,6 +1,10 @@
 # 01 — Technical Architecture
 
 > Condensed from `docs/PRODUCT_SPEC.md` §3, 4, 21, 33. Read the spec for full detail.
+>
+> **Superseded in part:** this doc predates the CLI-only pivot (see `CLAUDE.md` and
+> `docs/plan/03-roadmap.md`'s top note) — `apps/web`/`apps/api` no longer exist.
+> The Blueprint/generator/adapter architecture described below is still accurate.
 
 ## Monorepo
 
