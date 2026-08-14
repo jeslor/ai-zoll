@@ -5,9 +5,9 @@
   "description": "Raw templates consumed by packages/generators and packages/agents.",
   "main": "src/index.ts",
   "scripts": {
-    "build": "echo \"[templates] not implemented yet\"",
-    "lint": "echo \"[templates] not implemented yet\"",
-    "test": "echo \"[templates] not implemented yet\"",
-    "typecheck": "echo \"[templates] not implemented yet\""
+    "build": "echo \"[templates] deliberately empty — see README\"",
+    "lint": "echo \"[templates] deliberately empty — see README\"",
+    "test": "echo \"[templates] deliberately empty — see README\"",
+    "typecheck": "echo \"[templates] deliberately empty — see README\""
   }
 }

@@ -33,6 +33,7 @@ interface Location {
 }
 
 function attribute<T>(locations: Location[], findings: Finding<T>[]): AttributedFinding<T>[] {
+  // biome-ignore lint/style/noNonNullAssertion: findings is built by mapping over locations, so the arrays are always parallel
   return findings.map((finding, i) => ({ source: locations[i]!.relativePath, finding }));
 }
 

@@ -85,11 +85,12 @@ function extractRelativeImports(content: string): string[] {
   const imports: string[] = [];
   for (const pattern of [FROM_IMPORT_PATTERN, REQUIRE_PATTERN, SIDE_EFFECT_IMPORT_PATTERN]) {
     pattern.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = pattern.exec(content))) {
+    let match = pattern.exec(content);
+    while (match !== null) {
       if (match[1]) {
         imports.push(match[1]);
       }
+      match = pattern.exec(content);
     }
   }
   return imports;

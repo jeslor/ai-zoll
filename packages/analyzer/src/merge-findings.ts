@@ -33,7 +33,9 @@ function resolveSpecialization<T>(
   if (metaValues.length !== 1) {
     return null;
   }
+  // biome-ignore lint/style/noNonNullAssertion: metaValues.length === 1 just confirmed above
   const meta = metaValues[0]!;
+  // biome-ignore lint/style/noNonNullAssertion: meta passed the `v in specializes` filter above
   const impliedBase = specializes[meta]!;
   const unexplained = distinctValues.filter((v) => v !== meta && v !== impliedBase);
   if (unexplained.length > 0) {
@@ -84,6 +86,7 @@ export function mergeCategorical<T>(
   specializes?: Record<string, string>,
 ): Finding<T> {
   if (attributed.length === 1) {
+    // biome-ignore lint/style/noNonNullAssertion: length === 1 just checked
     return attributed[0]!.finding;
   }
 
@@ -113,6 +116,7 @@ export function mergeCategorical<T>(
   }
 
   if (withValue.length === 1) {
+    // biome-ignore lint/style/noNonNullAssertion: length === 1 just checked
     return withValue[0]!.finding;
   }
 
@@ -136,6 +140,7 @@ export function mergeCategorical<T>(
  */
 export function mergeBoolean(attributed: AttributedFinding<boolean>[]): Finding<boolean> {
   if (attributed.length === 1) {
+    // biome-ignore lint/style/noNonNullAssertion: length === 1 just checked
     return attributed[0]!.finding;
   }
 
@@ -172,6 +177,7 @@ export function mergeBoolean(attributed: AttributedFinding<boolean>[]): Finding<
  */
 export function mergeArray(attributed: AttributedFinding<string[]>[]): Finding<string[]> {
   if (attributed.length === 1) {
+    // biome-ignore lint/style/noNonNullAssertion: length === 1 just checked
     return attributed[0]!.finding;
   }
 

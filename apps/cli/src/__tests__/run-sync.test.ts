@@ -51,7 +51,7 @@ function seedProject(dir: string, blueprint: ProjectBlueprint, agentId: Supporte
   for (const file of files) {
     const fullPath = path.join(dir, file.path);
     fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-    fs.writeFileSync(fullPath, wrapManaged(file.content) + CUSTOM_ZONE_HINT + "\n");
+    fs.writeFileSync(fullPath, `${wrapManaged(file.content) + CUSTOM_ZONE_HINT}\n`);
   }
 
   writeProjectState(dir, { blueprint, generatedPaths: files.map((f) => f.path), directorySignals: [] });

@@ -1045,11 +1045,36 @@ session. `login`/auth has no remaining use case now that the dashboard and
 `init <project-id>` are both out of scope — this is a fully local, account-free tool
 by design, not a gap.
 
+**Real lint tooling and stale docs — since fixed.** Every package's `lint` script is
+now a real `biome check src`, not a placeholder echo. ESLint + `typescript-eslint` was
+tried first and rejected: this project's `typescript@^7.0.2` hits a hard, actively-
+enforced version gate inside `typescript-eslint` itself ("does not support TS 7.0",
+not a soft peer-range warning — see `typescript-eslint#10940`), so it refuses to run
+at all, not just its type-aware rules. Biome doesn't wrap the TypeScript compiler API
+the same way and has no such gate. Root `biome.json` enables the linter only (not the
+bundled formatter/import-organizer — this codebase's existing 2-space/`.editorconfig`
+style wasn't a flagged gap, and turning on a whole-repo formatter would have produced
+a huge, unrelated reformat diff). First real run surfaced genuine issues, all fixed
+rather than suppressed: an idiomatic-but-flagged `while ((match = re.exec(...)))`
+assignment-in-expression loop rewritten to avoid the assignment entirely, several
+string concatenations converted to template literals, and about a dozen
+`noUncheckedIndexedAccess`-driven non-null assertions (`arr[i]!`) either replaced with
+a genuinely safe pattern (`match?.[1] ?? null`, a type-guarded `.filter()`,
+`.charAt(i)` for an always-in-bounds loop index) or, where no clean alternative
+existed for a real, locally-proven invariant (e.g. `arr[0]!` right after checking
+`arr.length === 1`), kept as `!` with an inline `biome-ignore` comment explaining the
+invariant, rather than restructured into worse code just to satisfy the linter. Full
+workspace `build`/`typecheck`/`lint`/`test` all green after. `packages/blueprint`'s and
+`packages/generators`' READMEs (`Not yet wired to an AIProvider` / `not yet
+implemented (placeholder package)`) were stale and are now fixed; `packages/templates`'
+README/scripts were reworded from `not implemented yet` to `deliberately empty`, since
+it's genuinely unused (no code imports `@ai-zoll/templates`) by design, not an
+unstarted Phase 2 item.
+
 What's left, genuinely: **npm publish readiness** (the CLI currently depends on 6
 internal `@ai-zoll/*` workspace packages that aren't published anywhere — installing
 it outside this monorepo would crash on the first cross-package `require`; needs
-either a bundler or a multi-package publish strategy, neither decided yet), real lint
-tooling (every package's `lint` script is still a placeholder echo), a handful of
-stale package `README.md` files, and — always — fresh research whenever the next
-agent adapter candidate is actually needed, since this landscape consolidates
-quickly and nothing beyond Cline/Zed is currently tracked.
+either a bundler or a multi-package publish strategy, neither decided yet), and —
+always — fresh research whenever the next agent adapter candidate is actually needed,
+since this landscape consolidates quickly and nothing beyond Cline/Zed is currently
+tracked.

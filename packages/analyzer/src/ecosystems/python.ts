@@ -22,7 +22,7 @@ function extractRequirementName(line: string): string | null {
     return null;
   }
   const match = /^([A-Za-z0-9][A-Za-z0-9._-]*)/.exec(withoutComment);
-  return match ? match[1]! : null;
+  return match?.[1] ?? null;
 }
 
 function readRequirementsTxt(repoPath: string): string[] {
@@ -60,7 +60,7 @@ function extractDependenciesArrayContent(content: string): string | null {
   let inString = false;
   let stringChar = "";
   for (let i = start; i < content.length; i++) {
-    const char = content[i]!;
+    const char = content.charAt(i);
     if (inString) {
       if (char === stringChar && content[i - 1] !== "\\") {
         inString = false;

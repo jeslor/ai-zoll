@@ -12,6 +12,8 @@ export function readRubyDependencyNames(repoPath: string): Set<string> {
     return new Set();
   }
 
-  const names = [...content.matchAll(GEM_PATTERN)].map((match) => match[1]!);
+  const names = [...content.matchAll(GEM_PATTERN)]
+    .map((match) => match[1])
+    .filter((name): name is string => name !== undefined);
   return new Set(names);
 }

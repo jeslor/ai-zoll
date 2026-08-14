@@ -85,7 +85,7 @@ export function mergeManagedContent(
 ): MergeResult {
   if (existingContent === undefined) {
     return {
-      content: wrapManaged(freshContent) + CUSTOM_ZONE_HINT + "\n",
+      content: `${wrapManaged(freshContent) + CUSTOM_ZONE_HINT}\n`,
       status: "created",
     };
   }

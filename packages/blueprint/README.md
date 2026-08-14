@@ -4,8 +4,11 @@ The canonical Project Blueprint: `schemas/` (Zod), `types/`, `validation/`. The 
 source of truth every generator and agent adapter consumes. See
 `docs/PRODUCT_SPEC.md` §4 and `docs/decisions/0002-blueprint-as-source-of-truth.md`.
 
-**Status:** schema, types, and validation implemented. Not yet wired to an `AIProvider`
-(mock or real) — see `docs/plan/03-roadmap.md` Phase 1 for what's left.
+**Status:** schema, types, and validation implemented and fully wired — both
+`MockAIProvider` and the real `ClaudeAIProvider` (`packages/ai`) produce
+schema-validated `ProjectBlueprint`s via `safeParseBlueprint()`, so no LLM
+response ever bypasses this package's validation. See
+`docs/plan/03-roadmap.md` Phase 1/4 for how this was built.
 
 ## What's here
 
@@ -22,7 +25,7 @@ source of truth every generator and agent adapter consumes. See
 ## A deliberate asymmetry
 
 `architecture.style` and `agent.primary` are closed Zod enums — the spec currently
-enumerates a fixed set for both (§7's five architecture styles; the four adapters under
+enumerates a fixed set for both (§7's five architecture styles; the six adapters under
 `packages/agents/src/`). `stack.frontend/backend/database/orm` and
 `security.authentication/authorization` are open, validated non-empty strings, because
 spec §6 explicitly requires the stack selection to stay extensible without a schema
