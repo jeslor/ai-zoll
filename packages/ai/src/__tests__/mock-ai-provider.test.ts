@@ -4,6 +4,7 @@ import { MockAIProvider } from "../providers/mock-ai-provider";
 import type { BlueprintInput } from "../provider";
 import validInput from "./fixtures/valid-blueprint-input.json";
 import invalidInput from "./fixtures/invalid-blueprint-input.json";
+import { minimalRepositoryAnalysis } from "./fixtures/repository-analysis";
 
 describe("MockAIProvider.generateBlueprint", () => {
   it("assembles a valid, spec-compliant ProjectBlueprint from structured input", async () => {
@@ -57,5 +58,25 @@ describe("MockAIProvider.generateBlueprint", () => {
         (issue) => issue.path === "architecture.style",
       ),
     ).toBe(true);
+  });
+});
+
+describe("MockAIProvider.interpretRepository", () => {
+  it("returns empty insights for every category — no LLM call, no fabricated content", async () => {
+    const provider = new MockAIProvider();
+    const insights = await provider.interpretRepository(minimalRepositoryAnalysis);
+
+    expect(insights).toEqual({
+      businessDomains: [],
+      modules: [],
+      architecturalPatterns: [],
+      conventions: [],
+      importantDependencies: [],
+      testingPatterns: [],
+      securityPatterns: [],
+      undocumentedConventions: [],
+      inconsistencies: [],
+      missingDocumentation: [],
+    });
   });
 });

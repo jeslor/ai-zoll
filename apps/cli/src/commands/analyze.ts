@@ -1,10 +1,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { confirm } from "@inquirer/prompts";
-import type { BlueprintInput } from "@ai-zoll/ai";
-import type { Finding } from "@ai-zoll/analyzer";
+import type { AIProvider, BlueprintInput, RepositoryInsights } from "@ai-zoll/ai";
+import type { Finding, RepositoryAnalysis } from "@ai-zoll/analyzer";
 import { analyzeRepository } from "@ai-zoll/analyzer";
 import { runAnalyze } from "../run-analyze";
+import { selectAIProvider } from "../select-ai-provider";
 import { printApplyResult } from "../print-apply-result";
 import type { TestingTypes } from "./prompts";
 import {
@@ -92,6 +93,57 @@ async function resolveTesting(testing: {
   };
 }
 
+const INSIGHTS_SECTIONS: Array<[label: string, key: keyof RepositoryInsights]> = [
+  ["Business domains", "businessDomains"],
+  ["Modules", "modules"],
+  ["Architectural patterns", "architecturalPatterns"],
+  ["Conventions", "conventions"],
+  ["Important dependencies", "importantDependencies"],
+  ["Testing patterns", "testingPatterns"],
+  ["Security patterns", "securityPatterns"],
+  ["Undocumented conventions", "undocumentedConventions"],
+  ["Inconsistencies", "inconsistencies"],
+  ["Missing documentation", "missingDocumentation"],
+];
+
+/**
+ * spec §17's "Existing Project Report", AI-assisted half (§16). Purely
+ * informational — never blocks or feeds the interactive resolution below;
+ * a request-level failure (network, malformed structured output) degrades
+ * to a one-line notice rather than failing the whole `analyze` command,
+ * since this is explicitly optional per "AI improves output, never
+ * required". A missing-API-key configuration error is deliberately NOT
+ * caught here — see the eager `selectAIProvider` call in
+ * `runAnalyzeCommand`, which fails fast before any of this report prints.
+ */
+async function printAIInsights(provider: AIProvider, analysis: RepositoryAnalysis): Promise<void> {
+  console.log("AI-ASSISTED INSIGHTS\n");
+
+  let insights: RepositoryInsights;
+  try {
+    insights = await provider.interpretRepository(analysis);
+  } catch (error) {
+    console.log(`  Unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    console.log();
+    return;
+  }
+
+  const nonEmptySections = INSIGHTS_SECTIONS.filter(([, key]) => insights[key].length > 0);
+  if (nonEmptySections.length === 0) {
+    console.log("  No additional insights identified.");
+    console.log();
+    return;
+  }
+
+  for (const [label, key] of nonEmptySections) {
+    console.log(`  ${label}:`);
+    for (const item of insights[key]) {
+      console.log(`    - ${item}`);
+    }
+  }
+  console.log();
+}
+
 /**
  * The existing-project flow (spec §12-18): analyze first, show what was
  * found, confirm before writing anything. Reuses runAnalyze's merge-aware
@@ -103,6 +155,12 @@ export async function runAnalyzeCommand(options: RunAnalyzeCommandOptions): Prom
   if (fs.existsSync(path.join(projectDir, ".ai-zoll", "state.json"))) {
     throw new Error(`"${projectDir}" is already an ai-zoll project — use "ai-zoll sync" instead.`);
   }
+
+  // Selected eagerly, before any output, so a missing ANTHROPIC_API_KEY
+  // fails fast — the same "--ai with no key throws, never silently
+  // degrades" contract selectAIProvider already enforces elsewhere, just
+  // surfaced before the interactive Q&A below rather than after it.
+  const aiProvider = options.useAI ? selectAIProvider(true) : null;
 
   console.log("Analyzing repository...\n");
   const analysis = analyzeRepository(projectDir);
@@ -118,6 +176,10 @@ export async function runAnalyzeCommand(options: RunAnalyzeCommandOptions): Prom
   printFinding("Authentication", analysis.dependency.authentication);
   printFinding("Authorization", analysis.dependency.authorization);
   console.log();
+
+  if (aiProvider) {
+    await printAIInsights(aiProvider, analysis);
+  }
 
   // project.name: prefer PackageAnalyzer's finding, fall back to GitAnalyzer's.
   const nameFinding: Finding<string> =

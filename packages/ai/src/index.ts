@@ -1,4 +1,5 @@
 export type { AIProvider, BlueprintInput } from "./provider";
+export { RepositoryInsightsSchema, type RepositoryInsights } from "./insights";
 export { MockAIProvider } from "./providers/mock-ai-provider";
 export {
   ClaudeAIProvider,

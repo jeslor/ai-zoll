@@ -4,6 +4,7 @@ import { CURRENT_BLUEPRINT_VERSION, BlueprintValidationError } from "@ai-zoll/bl
 import { ClaudeAIProvider } from "../providers/claude-ai-provider";
 import type { BlueprintInput } from "../provider";
 import validInput from "./fixtures/valid-blueprint-input.json";
+import { minimalRepositoryAnalysis } from "./fixtures/repository-analysis";
 
 /** Minimal fake matching only the surface ClaudeAIProvider actually calls. */
 function fakeClient(parse: (...args: unknown[]) => unknown): Anthropic {
@@ -191,5 +192,89 @@ describe("ClaudeAIProvider.generateBlueprint", () => {
     expect(parse).toHaveBeenCalledWith(
       expect.objectContaining({ model: "claude-sonnet-5" }),
     );
+  });
+});
+
+describe("ClaudeAIProvider.interpretRepository", () => {
+  it("returns validated insights from a well-formed response, in a single request (no repair round)", async () => {
+    const parse = vi.fn().mockResolvedValue({
+      parsed_output: {
+        businessDomains: ["Billing"],
+        modules: ["users", "billing"],
+        architecturalPatterns: ["modular monolith"],
+        conventions: ["one folder per domain"],
+        importantDependencies: ["prisma"],
+        testingPatterns: ["vitest for unit tests"],
+        securityPatterns: ["JWT-based auth"],
+        undocumentedConventions: [],
+        inconsistencies: [],
+        missingDocumentation: ["no AGENTS.md"],
+      },
+    });
+
+    const provider = new ClaudeAIProvider({ client: fakeClient(parse) });
+    const insights = await provider.interpretRepository(minimalRepositoryAnalysis);
+
+    expect(insights.businessDomains).toEqual(["Billing"]);
+    expect(insights.modules).toEqual(["users", "billing"]);
+    expect(insights.undocumentedConventions).toEqual([]);
+    expect(parse).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws (no repair round) when the response fails schema validation", async () => {
+    const parse = vi.fn().mockResolvedValue({
+      parsed_output: {
+        businessDomains: "not an array", // wrong type
+        modules: [],
+        architecturalPatterns: [],
+        conventions: [],
+        importantDependencies: [],
+        testingPatterns: [],
+        securityPatterns: [],
+        undocumentedConventions: [],
+        inconsistencies: [],
+        missingDocumentation: [],
+      },
+    });
+
+    const provider = new ClaudeAIProvider({ client: fakeClient(parse) });
+
+    await expect(provider.interpretRepository(minimalRepositoryAnalysis)).rejects.toThrow(
+      /failed validation/,
+    );
+    expect(parse).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats a null parsed_output as an empty (and therefore invalid) object, and throws", async () => {
+    const parse = vi.fn().mockResolvedValue({ parsed_output: null });
+
+    const provider = new ClaudeAIProvider({ client: fakeClient(parse) });
+
+    await expect(provider.interpretRepository(minimalRepositoryAnalysis)).rejects.toThrow(
+      /failed validation/,
+    );
+  });
+
+  it("sends the repository analysis, not raw repository files, as the request body", async () => {
+    const parse = vi.fn().mockResolvedValue({
+      parsed_output: {
+        businessDomains: [],
+        modules: [],
+        architecturalPatterns: [],
+        conventions: [],
+        importantDependencies: [],
+        testingPatterns: [],
+        securityPatterns: [],
+        undocumentedConventions: [],
+        inconsistencies: [],
+        missingDocumentation: [],
+      },
+    });
+
+    const provider = new ClaudeAIProvider({ client: fakeClient(parse) });
+    await provider.interpretRepository(minimalRepositoryAnalysis);
+
+    const call = parse.mock.calls[0]?.[0] as { messages: Array<{ content: string }> };
+    expect(call.messages[0]?.content).toContain("hasMonorepoLayout");
   });
 });

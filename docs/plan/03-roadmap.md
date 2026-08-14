@@ -471,16 +471,15 @@ point (Next.js, App Router) but was removed along with `apps/api` when the produ
 pivoted to CLI-only — see the note at the top of this document. Not "not started
 yet," genuinely not planned under the current direction.
 
-## Phase 7 — Existing Project Analysis — **deterministic path done, AI enhancement not started**
+## Phase 7 — Existing Project Analysis — **done, including the AI-assisted layer**
 
 `npx ai-zoll analyze`. Deterministic analyzers first (see
 `packages/analyzer`), then AI interpretation on top (opt-in via the same `--ai` flag
 `init` uses — real, not required; improves output, never a hard dependency). Never
 modifies application source code at this stage. The command is fully usable end-to-end
-today on the deterministic path alone (see the last checkbox below); what's left is
-spec §16's optional AI-assisted layer (business domains, modules, undocumented
-conventions) — genuinely optional per this session's "AI improves output, never
-required" product direction, not a blocker to calling this phase usable.
+on the deterministic path alone (see the checkbox below); spec §16's AI-assisted
+layer is also now real, not just a documented gap — see the new checkbox further
+down.
 
 - [x] `packages/analyzer` first slice — `PackageAnalyzer`, `FrameworkAnalyzer`,
       `DatabaseAnalyzer`, `TestAnalyzer`, combined by `analyzeRepository()`, following
@@ -646,8 +645,61 @@ required" product direction, not a blocker to calling this phase usable.
       confirmed the repo's real hand-written `README.md` and real application source
       stayed byte-for-byte untouched, and confirmed a subsequent `sync cursor` worked
       on the adopted project.
+- [x] AI-assisted analysis layer (spec §16) — closes this phase's last gap.
+      `AIProvider` gained `interpretRepository(analysis: RepositoryAnalysis):
+      Promise<RepositoryInsights>` (`packages/ai/src/provider.ts`), sitting
+      *after* `analyzeRepository()`, not replacing it — the model only ever
+      sees the already-computed, compact `RepositoryAnalysis` (never raw
+      repository files, per ADR 0004/spec §34 cost control), consistent with
+      `packages/ai` -> `packages/analyzer` now being a real, one-directional
+      workspace dependency (no cycle — `packages/analyzer` depends on
+      nothing). `RepositoryInsightsSchema` (`packages/ai/src/insights.ts`)
+      implements spec §16's ten categories verbatim (business domains,
+      modules, architectural patterns, conventions, important dependencies,
+      testing patterns, security patterns, undocumented conventions,
+      inconsistencies, missing documentation) as flat string arrays, each
+      independently allowed to be empty — "no evidence" is a valid answer,
+      not padded to look more thorough (same spirit as `Finding`'s
+      `Confidence` tiers, applied to prose). `ClaudeAIProvider.
+      interpretRepository` reuses the exact `zodOutputFormat`/
+      `messages.parse` structured-output pattern `generateBlueprint`
+      established, generalized `request()` to accept a system prompt +
+      output format per call so both methods share it. Deliberately
+      **single-attempt, no repair round** (unlike `generateBlueprint`) and
+      **purely informational** — nothing here is persisted into the
+      Blueprint or used to generate any file (spec §16: "The AI should not
+      automatically modify source code during this stage"), so there's no
+      correctness requirement forcing a retry the way persisting an invalid
+      Blueprint would. `MockAIProvider.interpretRepository` returns all-empty
+      insights (real, tested, not a stub) — exists for `AIProvider` interface
+      conformance; the CLI never actually calls it, since insights are only
+      requested when `--ai` selected the real provider in the first place.
+      Wired into `apps/cli/src/commands/analyze.ts`: prints an
+      "AI-ASSISTED INSIGHTS" section right after the deterministic
+      "PROJECT ANALYSIS" block, skipping any category the model returned
+      empty. A request-level failure (network, malformed structured output)
+      degrades to a one-line notice and the rest of `analyze` proceeds
+      unaffected — "AI improves output, never required" applied concretely.
+      A missing-key configuration error is deliberately NOT caught the same
+      way: the provider is now selected *eagerly*, before any output, so
+      `--ai` with no `ANTHROPIC_API_KEY` fails fast immediately — a genuine
+      UX improvement surfaced as a side effect (previously, `runAnalyze`
+      only discovered the missing key at the very end, after the entire
+      interactive Q&A). 6 new tests in `packages/ai` (both providers, plus a
+      validation-failure and a null-`parsed_output` case for Claude's), no
+      dedicated unit test for the CLI wiring itself (matching this
+      codebase's existing precedent — `commands/*.ts` wrappers aren't
+      unit-tested directly anywhere, only their non-interactive `run-*.ts`
+      cores are). Verified for real: built the CLI, ran `analyze --ai` with
+      no API key set and confirmed it failed immediately with a clear error
+      before any analysis output printed; separately exercised the actual
+      print logic against a fake provider returning realistic multi-category
+      insights and confirmed the rendered report (including correctly
+      skipping an empty category) matches what's described above. No live
+      `ANTHROPIC_API_KEY`-backed run was performed — same choice already
+      made for Phase 4's `generateBlueprint`, offline tests only.
 
-## Phase 8 — Existing Project AI Layer — **mostly superseded by Phase 7's shipped `analyze`; AI layer not started**
+## Phase 8 — Existing Project AI Layer — **mostly superseded by Phase 7's shipped `analyze`; AI-assisted interpretation now shipped too, only `CONVENTIONS.md` generation left**
 
 Originally scoped as: generate `AGENTS.md`, `PROJECT.md`, `ARCHITECTURE.md`,
 `CONVENTIONS.md`, `skills/`, agent-specific config around an existing repo, preserving
@@ -658,11 +710,18 @@ delivered there instead: `AGENTS.md`/`PROJECT.md`/`ARCHITECTURE.md`/`skills/`/ag
 config are all generated for existing projects today, application source is proven
 byte-for-byte preserved (dogfooded three times against real repos), and re-running is
 handled correctly (`analyze` refuses on an already-adopted directory and points to
-`sync`, which is the actual idempotent-regeneration path). What's genuinely still
-missing, tracked here rather than as a separate phase: **`CONVENTIONS.md` is not
-generated by anything** (no generator function exists for it), and the **AI-assisted
-interpretation layer is not started** — this is the same gap as Phase 7's "optional
-`--ai` enhancement" item, not a second, separate one; don't plan them independently.
+`sync`, which is the actual idempotent-regeneration path). The AI-assisted
+interpretation layer, this phase's other original item, is also done now — see Phase
+7's last checkbox (`AIProvider.interpretRepository`); it isn't tracked twice. What's
+genuinely still missing: **`CONVENTIONS.md` is not generated by anything** (no
+generator function exists for it). The AI-assisted insights layer is a natural future
+*source* for that file's content (undocumented conventions/inconsistencies map
+directly), but that wiring — taking `RepositoryInsights` and turning it into a real,
+persisted, golden-testable file rather than a console-only report — is deliberately
+not built yet; it would need its own design pass (does it go through the Blueprint,
+like `features` does, or get written directly as informational prose outside the
+deterministic-generator/golden-test guarantee ADR 0004 requires for everything else in
+`packages/generators`? Genuinely undecided, not an oversight).
 
 ## Phase 9 — Sync (original meaning: local/remote Blueprint diff) — **out of scope (CLI-only pivot)**
 
@@ -756,10 +815,13 @@ on every `state.json` read) has been in place since Phase 5. Steps 11 and 17
 now has a real, shipped first slice (`ai-zoll check`, field-comparison against the
 stored Blueprint) — what's left there is import-boundary violations and
 undocumented-directory detection, both genuinely separate sub-features, not smaller
-versions of what shipped (see Phase 11 above). Beyond that, in rough priority order:
-the **optional AI-assisted analysis layer** (Phase 7/8's shared remaining gap —
-business-domain interpretation on top of the deterministic `analyze` output, plus a
-still-unwritten `CONVENTIONS.md` generator); **multi-language analyzer support**
+versions of what shipped (see Phase 11 above). The **AI-assisted analysis layer**
+(spec §16, Phase 7/8's shared item) is also now shipped — `analyze --ai` prints
+business-domain/module/convention/inconsistency observations via
+`AIProvider.interpretRepository`. What's left there specifically is narrower than
+before: turning those insights into a real, persisted `CONVENTIONS.md` file (a
+separate design question — see Phase 8 above), not the interpretation step itself.
+Beyond that, in rough priority order: **multi-language analyzer support**
 (Node/TypeScript only today); and **future agent adapters** beyond the initial four
 (Cline, Zed — researched in `docs/decisions/0003-agent-adapter-pattern.md`, not
 built). `login`/auth (originally tied to `init <project-id>` and dashboard auth) has
