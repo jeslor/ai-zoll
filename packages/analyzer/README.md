@@ -70,3 +70,19 @@ root after the fix correctly reports `frontend: nextjs` (from `apps/web`),
 `unit testing: true` with coverage attributed across all 11 real packages in this repo
 — a direct, concrete resolution of the gap that motivated building this, not just a
 fixture-level proof.
+
+A third real-repo pass, this time against a real NestJS backend (dual passport
+strategies, Prisma+Postgres, Jest with an e2e script), surfaced two more gaps:
+`DirectoryAnalyzer.signals` returned `unknown` even though the repo has a completely
+standard, well-organized structure — one folder per business *domain*
+(`Auth/`, `booking/`, `conversation/`), not per *layer*, so no directory NAME in the
+candidate list ever matched. Fixed by adding a second, complementary signal source:
+file-naming *suffixes* (`Name.controller.ts`, `Name.service.ts`, `Name.module.ts`, ...
+— the actual NestJS/Angular convention), found via the same bounded, exclusion-aware
+walk `TestAnalyzer` already uses. Still a raw fact, not a classification — a file being
+named `*.controller.ts` is exactly as deterministic as a directory being named
+`controllers/`. Separately, `TestAnalyzer`'s file-pattern check only recognized the
+dot-separated convention (`*.spec.ts`) and missed NestJS's own official hyphenated e2e
+convention (`*.e2e-spec.ts`) — this specific repo's `test:e2e` script happened to mask
+the gap (script-based detection caught it anyway), but a repo relying on file presence
+alone would have been missed; fixed to recognize both separators.

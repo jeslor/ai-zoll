@@ -14,7 +14,12 @@ const UNIT_TEST_DEPS = ["vitest", "jest", "mocha", "ava"];
 const E2E_TEST_DEPS = ["playwright", "@playwright/test", "cypress"];
 
 const TEST_DIR_NAMES = new Set(["test", "tests", "__tests__"]);
-const TEST_FILE_PATTERN = /\.(test|spec)\.[^.]+$/;
+// Accepts both the dot-separated convention (name.spec.ts, name.test.ts) and
+// NestJS's own official hyphenated e2e convention (name.e2e-spec.ts) — found
+// via dogfooding against a real NestJS backend, where this file-pattern gap
+// was masked only because a matching "test:e2e" script also happened to
+// exist; a repo relying on file presence alone would have been missed.
+const TEST_FILE_PATTERN = /[.-](test|spec)\.[^.]+$/;
 const MAX_WALK_DEPTH = 4;
 
 /** The classic npm-init default — present, but not evidence tests actually exist. */

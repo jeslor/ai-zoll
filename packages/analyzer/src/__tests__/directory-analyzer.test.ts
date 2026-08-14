@@ -83,6 +83,36 @@ describe("analyzeDirectory", () => {
     expect(analyzeDirectory(dir).signals.value?.sort()).toEqual(["components", "hooks", "lib", "store"]);
   });
 
+  it("recognizes a real-world NestJS domain-per-folder layout via file-naming suffixes, not directory names (found via dogfooding against a real NestJS backend)", () => {
+    // Auth/, booking/, conversation/ etc. — folders named by business domain,
+    // not by layer, each containing its own *.controller.ts/*.service.ts/
+    // *.module.ts. CANDIDATE_DIRECTORY_NAMES alone finds nothing here; this
+    // is exactly the gap the file-suffix signal closes.
+    const files: Record<string, string> = {
+      "src/Auth/Auth.controller.ts": "",
+      "src/Auth/Auth.service.ts": "",
+      "src/Auth/Auth.module.ts": "",
+      "src/Auth/strategy/jwt.strategy.ts": "",
+      "src/Auth/guard/jwt.guard.ts": "",
+      "src/booking/booking.controller.ts": "",
+      "src/booking/dto/create-booking.dto.ts": "",
+    };
+    const dir = makeFixtureRepo(files);
+    tempDirs.push(dir);
+
+    const result = analyzeDirectory(dir);
+
+    expect(result.signals.confidence).toBe("detected");
+    expect(result.signals.value?.sort()).toEqual([
+      "controller",
+      "dto",
+      "guard",
+      "module",
+      "service",
+      "strategy",
+    ]);
+  });
+
   it("recognizes Feature-Sliced Design layers", () => {
     const dir = seed(["features", "widgets", "shared", "entities"]);
 

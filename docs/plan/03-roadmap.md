@@ -579,6 +579,29 @@ required" product direction, not a blocker to calling this phase usable.
       correctly attributed across all 11 real packages in this repo — a direct
       resolution of the exact gap that motivated this work, not just a fixture-level
       proof.
+- [x] Third dogfooding pass, against a real NestJS backend (dual passport strategies,
+      Prisma+Postgres, Jest with a `test:e2e` script) — found and fixed two more real
+      gaps. `DirectoryAnalyzer.signals` returned `unknown` despite the repo having a
+      completely standard structure (`Auth/`, `booking/`, `conversation/` — one folder
+      per business *domain*, not per *layer*), so no directory name in the candidate
+      list matched; fixed by adding a second signal source, file-naming *suffixes*
+      (`Name.controller.ts`, `Name.service.ts`, `Name.module.ts`, ...), found via the
+      same bounded/exclusion-aware walk `TestAnalyzer` already uses — still a raw fact,
+      not a classification, per the same ADR 0004 boundary. `TestAnalyzer`'s file
+      pattern also only recognized the dot-separated convention and missed NestJS's own
+      official hyphenated `*.e2e-spec.ts` convention (this repo's `test:e2e` script
+      happened to mask the gap via a different signal; a repo without that script
+      would've been missed) — fixed to recognize both separators. Also confirmed a
+      designed, not accidental, behavior for real: this repo has *two* passport
+      strategies (`passport-jwt` + `passport-google-oauth20`) simultaneously, and
+      `DependencyAnalyzer` correctly picked the first-checked one per its documented
+      first-match-wins order, not a bug. 4 new tests, 103 total in `packages/analyzer`.
+      Verified for real: rebuilt, re-ran `analyzeRepository()` against the same cloned
+      repo, confirmed `directory.signals` now reports `controller, module, service,
+      dto, guard, strategy, entity`; ran the full `runAnalyze` pipeline against it,
+      confirmed the repo's real hand-written `README.md` and real application source
+      stayed byte-for-byte untouched, and confirmed a subsequent `sync cursor` worked
+      on the adopted project.
 
 ## Phase 8 — Existing Project AI Layer — **not started**
 
