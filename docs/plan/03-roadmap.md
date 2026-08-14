@@ -455,13 +455,32 @@ dashboard-created blueprint). CLI must be usable with zero dashboard involvement
       survived with the note intact, `.claude/` was removed, `.cursor/rules/*`
       was created, `AGENTS.md` was untouched, and `state.json` reflected the
       new agent — plus a same-agent `sync` and an unsupported-agent error path.
+- [x] Fixed a real non-destructiveness bug in `apply-generated-files.ts`, found during
+      Phase 7's fourth dogfooding pass (see there for the full context): cal.com's
+      real repo has `.cursor/rules` and `.claude/skills` as pre-existing symlinks into
+      a real, git-tracked `agents/` directory it maintains itself (sharing rule
+      content across agent tools). The writer only checked whether the *leaf* file
+      path was a symlink (`lstatSync(fullPath).isSymbolicLink()`) — an intermediate
+      *directory* being a symlink resolves transparently at the OS level, so
+      `.cursor/rules/project.mdc` silently wrote through the symlink into cal.com's
+      real `agents/rules/` directory, and a stale path reconciliation during a
+      same-run agent switch briefly did the same for a delete. Fixed with a new
+      `hasSymlinkedAncestor` check (any directory between `projectDir` and a file's
+      parent), applied to both the write and stale-deletion paths — treated exactly
+      like the existing leaf-symlink case: preserved, reported, never touched. 2 new
+      tests reproducing the exact scenario (a symlinked ancestor pointing to a real
+      directory with real content, for both the write and delete paths); all 58
+      pre-existing `apps/cli` tests passed unchanged. Verified for real: re-cloned
+      cal.com fresh, rebuilt, re-ran the full `analyze` → `sync cursor` pipeline, and
+      confirmed cal.com's real `agents/rules/`/`agents/skills/` directories were no
+      longer polluted (previously confirmed polluted with the pre-fix build).
 - ~~`init <project-id>` (downloads a dashboard-created blueprint)~~ — **out of
       scope (CLI-only pivot).** Presupposed `apps/web`, which no longer exists.
 - [x] `analyze` — shipped, see Phase 7.
-- [ ] `login` — the only genuinely open item from this phase's original list, and
-      arguably moot now: it existed to support `init <project-id>` and dashboard
-      auth, both out of scope. Leave unstarted until a real CLI-only use case for
-      authentication emerges (none identified yet).
+- ~~`login`~~ — **out of scope (CLI-only pivot).** Existed only to support
+      `init <project-id>` and dashboard auth, both removed above; there is no
+      remaining CLI-only use case for authentication. Not tracked as a pending
+      item — this is a fully local, account-free tool by design.
 
 ## Phase 6 — Dashboard — **out of scope (CLI-only pivot)**
 
@@ -471,7 +490,7 @@ point (Next.js, App Router) but was removed along with `apps/api` when the produ
 pivoted to CLI-only — see the note at the top of this document. Not "not started
 yet," genuinely not planned under the current direction.
 
-## Phase 7 — Existing Project Analysis — **done, including the AI-assisted layer**
+## Phase 7 — Existing Project Analysis — **done, including the AI-assisted layer and multi-language support**
 
 `npx ai-zoll analyze`. Deterministic analyzers first (see
 `packages/analyzer`), then AI interpretation on top (opt-in via the same `--ai` flag
@@ -645,6 +664,40 @@ down.
       confirmed the repo's real hand-written `README.md` and real application source
       stayed byte-for-byte untouched, and confirmed a subsequent `sync cursor` worked
       on the adopted project.
+- [x] Fourth dogfooding pass, against 10 real, diverse open source repos at once
+      (express, fastify, nestjs/nest, trpc, astro, sveltejs/kit, remix, cal.com,
+      directus, medusajs/medusa — shallow-cloned fresh, not fixtures) — the broadest
+      real-world sweep yet, and found two more real gaps, one of each severity this
+      package has now seen: a correctness gap in the deterministic core, and a real
+      non-destructiveness bug in `apps/cli`'s writer (see Phase 5's entry below for the
+      latter). **Zero crashes** across all 10, including 350+-package monorepos
+      (medusa), each analyzed in well under 200ms.
+      - Correctness gap: `mergeCategorical` reported `framework.frontend` as `unknown`
+        on both cal.com and SvelteKit's own repo, even though each has one obvious,
+        overwhelming answer (`nextjs`/`sveltekit`) — because one or two packages in
+        each large monorepo depend only on the *base* library (`react`/`svelte`
+        directly) rather than the meta-framework, and differing string values were
+        treated as pure disagreement. Fixed with a new, purely additive optional
+        `specializes` parameter on `mergeCategorical` (`{ nextjs: "react", remix:
+        "react", nuxt: "vue", sveltekit: "svelte" }`, `FRONTEND_SPECIALIZES` in
+        `framework-analyzer.ts`) — resolves to the meta-framework when every
+        disagreeing value is explained by exactly one meta/base pair, still reports
+        `unknown` when it isn't (a genuinely different framework family, or a meta
+        value alongside an unrelated base it doesn't imply). Every existing call site
+        omits the new parameter and is provably unaffected — all 103 pre-existing
+        analyzer tests passed unchanged before any new tests were added. Deliberately
+        **not** extended to `backend`: investigating trpc's and NestJS's own
+        `unknown` backend results (same dogfooding pass) found genuine, correct
+        ambiguity, not a bug — both repos really do ship multiple backend
+        integrations side by side (trpc supports both Express and Fastify adapters;
+        NestJS's own monorepo contains both `platform-express` and
+        `platform-fastify`), so there's no safe, unconditional "NestJS always implies
+        X" fact to encode the way "a Next.js app always has react" is unconditionally
+        true. 7 new tests (110 total in `packages/analyzer`). Verified for real:
+        re-cloned cal.com and SvelteKit's repo fresh, rebuilt, confirmed both now
+        report the meta-framework with a reason explaining the corroborating
+        base-library package, and confirmed trpc/nest still correctly report
+        `unknown` with the genuine multi-framework reasoning intact.
 - [x] AI-assisted analysis layer (spec §16) — closes this phase's last gap.
       `AIProvider` gained `interpretRepository(analysis: RepositoryAnalysis):
       Promise<RepositoryInsights>` (`packages/ai/src/provider.ts`), sitting
@@ -698,6 +751,100 @@ down.
       skipping an empty category) matches what's described above. No live
       `ANTHROPIC_API_KEY`-backed run was performed — same choice already
       made for Phase 4's `generateBlueprint`, offline tests only.
+- [x] Multi-language analyzer support — Python, Java, Rust, Go, Ruby, PHP, and .NET
+      added alongside Node/TypeScript, closing the single most-cited remaining gap.
+      `packages/analyzer/src/ecosystems/` gained one manifest reader per language
+      (`python.ts`/`java.ts`/`rust.ts`/`go.ts`/`ruby.ts`/`php.ts`/`dotnet.ts`), each
+      narrow and hand-written — no new TOML/XML/YAML parser dependency, matching this
+      package's existing precedent (the Prisma-schema and `pnpm-workspace.yaml`
+      regex extractors). New `read-dependency-names.ts`'s `readAllDependencyNames()`
+      unions every ecosystem's names found at a path; `FrameworkAnalyzer`/
+      `DatabaseAnalyzer`/`TestAnalyzer`/`DependencyAnalyzer` switched to it from the
+      old Node-only `readDependencyNames` — a single import-and-call-site change per
+      analyzer, since the matching/confidence/merge logic itself needed no changes at
+      all. Each analyzer's signal tables gained one block per language (backend
+      frameworks, ORMs, database drivers, auth/authz libraries); frontend-framework
+      detection deliberately stays Node/JS-only (no real equivalent concept in the
+      other ecosystems). `TestAnalyzer` gained per-language test-runner dependencies
+      and file-naming patterns (`test_*.py`, `*_test.go`, `*Test.java`, `*_spec.rb`,
+      `*Test.php`, `*Tests.cs`); Rust and Go deliberately have no test-runner
+      *dependency* signal (`cargo test`/`go test` are toolchain built-ins, not a
+      package), relying on file-pattern detection instead. 44 new tests (154 total in
+      `packages/analyzer`).
+
+      Verified for real against real, unmodified repos in all 4 compiled/systems
+      languages of the 7 (Python, Java, Go, Rust — the four the request named
+      explicitly), not just fixtures — cloned `tiangolo/full-stack-fastapi-template`,
+      `spring-projects/spring-petclinic`, `gothinkster/golang-gin-realworld-example-app`,
+      and `launchbadge/realworld-axum-sqlx` fresh, which found and fixed four more
+      real gaps in a single pass:
+      - **Spring Boot 4's renamed starter** (`spring-boot-starter-webmvc`, replacing
+        `spring-boot-starter-web`) was completely missing from the signal table —
+        spring-petclinic reported `backend: unknown` until both names were added.
+      - **Rust's dominant testing convention** (inline `#[test]`/`#[cfg(test)]`
+        attributes within ordinary source files, not a separate test-file naming
+        convention) was entirely invisible to the file-name-only walk every other
+        language relies on — a real Rust web service with real tests reported
+        `testing.unit: false (detected)`, a confident false negative. Fixed with a
+        small, targeted content read scoped to `.rs` files only, within the same
+        bounded/exclusion-aware walk `TestAnalyzer` already uses — not a general
+        "read every file's contents" policy.
+      - **PEP 621 dependency-array truncation**: the regex used to find where a
+        `pyproject.toml`'s `dependencies = [...]` array ends broke as soon as any
+        entry contained its own brackets (Python's extras syntax, e.g.
+        `"fastapi[standard]>=0.100"` — extremely common, not an edge case), silently
+        dropping every dependency after the first bracketed one. Fixed with a small
+        hand-written bracket-depth/string-aware scanner (still not a real TOML
+        parser) instead of a single regex.
+      - **`psycopg` (v3) and `sqlmodel`** — a separate, newer package from
+        `psycopg2`/`psycopg2-binary`, and a real, distinct ORM (Pydantic + SQLAlchemy
+        combined, from FastAPI's own author) — were both missing from the Python
+        signal tables; added after the FastAPI template repo used both exclusively.
+
+      All four fixes were re-verified against the specific real repo that exposed
+      them, not just the new unit tests, after rebuilding.
+
+      Also found, and deliberately **not** fixed in this pass: the FastAPI template
+      repo's actual Python manifest lives in `backend/pyproject.toml`, undiscovered
+      because it's a `uv` workspace (`[tool.uv.workspace] members = ["backend"]`) —
+      `workspace-discovery.ts` only understands the `apps/*`/`packages/*` +
+      pnpm/npm-workspaces convention, not `uv`/Poetry/Cargo/Go's own workspace
+      declarations. Confirmed this is a workspace-*discovery* gap, not a Python-reader
+      bug, by pointing `analyzeFramework`/etc. directly at `backend/` and getting
+      correct results immediately. Documented in `packages/analyzer/README.md` as a
+      real, stated limitation — extending workspace discovery to understand each new
+      ecosystem's own monorepo convention is separate, additional scope, not a quick
+      follow-on to this task.
+- [x] Broad real-world validation pass — 35 real, unmodified, popular (all far over
+      300 stars) open source repos, 5 per language across all 7 (Python: django,
+      flask, fastapi, django-rest-framework, celery; Java: spring-petclinic,
+      dropwizard, killbill, dubbo, javalin; Rust: axum, actix-web, sqlx, clap, tokio;
+      Go: gin, echo, fiber, caddy, cobra; Ruby: rails, sinatra, fastlane, huginn,
+      jekyll; PHP: laravel/laravel, symfony, Slim, composer, october; .NET:
+      eShopOnWeb, nopCommerce, OrchardCore, marten, eShop) — shallow-cloned fresh,
+      analyzed, cleaned up after. **Zero crashes across all 35**, including large
+      real solutions (OrchardCore's walk took 348ms, still well within budget).
+
+      Found and fixed one more systematic, high-severity real bug: `.NET`'s
+      `readDotnetDependencyNames` was repo-root-only, but **every one of the 5 real
+      .NET repos** has its actual `.csproj` files exclusively in subdirectories
+      (`src/*/`, `tests/*/`) — the dominant, near-universal real-world .NET solution
+      layout, not an edge case — so it reported nothing at all for any of them.
+      Fixed with a bounded, exclusion-aware walk (same `MAX_WALK_DEPTH` pattern
+      `TestAnalyzer`/`DirectoryAnalyzer` already use), additionally skipping
+      `bin`/`obj` build-output directories. Re-verified: went from 0/5 to 5/5 real
+      .NET repos correctly detecting `backend: aspnet`, and 4/5 also correctly
+      detecting their database/ORM. 3 new tests (156 total in `packages/analyzer`).
+
+      The other "unknown" results across the 35 are correctly explained, not bugs:
+      most of the Python/Rust/Go/Java picks above are frameworks' or tools' *own*
+      source repos (django doesn't depend on django, axum doesn't depend on axum,
+      etc.) — the same, already-validated "correctly unknown" pattern as Node's
+      `express`/`fastify` self-analysis. `django-rest-framework` has no Python
+      dependency manifest at all in its repo (an unusual, minimal packaging setup,
+      confirmed by direct inspection) — nothing to read, not a parser gap. Real
+      *consumer* apps among the 35 (spring-petclinic, huginn, laravel/laravel,
+      october, fastlane, all 5 .NET repos) consistently detected correctly.
 
 ## Phase 8 — Existing Project AI Layer — **mostly superseded by Phase 7's shipped `analyze`; AI-assisted interpretation now shipped too, only `CONVENTIONS.md` generation left**
 
@@ -708,7 +855,8 @@ existing source, idempotent on repeat runs. By the time Phase 7 shipped `analyze
 `AgentAdapter` pipeline `init` uses → non-destructive write), most of this was
 delivered there instead: `AGENTS.md`/`PROJECT.md`/`ARCHITECTURE.md`/`skills/`/agent
 config are all generated for existing projects today, application source is proven
-byte-for-byte preserved (dogfooded three times against real repos), and re-running is
+byte-for-byte preserved (dogfooded four times against real repos, including a 10-repo
+sweep), and re-running is
 handled correctly (`analyze` refuses on an already-adopted directory and points to
 `sync`, which is the actual idempotent-regeneration path). The AI-assisted
 interpretation layer, this phase's other original item, is also done now — see Phase
@@ -821,9 +969,14 @@ business-domain/module/convention/inconsistency observations via
 `AIProvider.interpretRepository`. What's left there specifically is narrower than
 before: turning those insights into a real, persisted `CONVENTIONS.md` file (a
 separate design question — see Phase 8 above), not the interpretation step itself.
-Beyond that, in rough priority order: **multi-language analyzer support**
-(Node/TypeScript only today); and **future agent adapters** beyond the initial four
-(Cline, Zed — researched in `docs/decisions/0003-agent-adapter-pattern.md`, not
-built). `login`/auth (originally tied to `init <project-id>` and dashboard auth) has
-no remaining use case now that both are out of scope — left unstarted indefinitely,
-not "next."
+**Multi-language analyzer support** is also done now — Python, Java, Rust, Go, Ruby,
+PHP, and .NET added alongside Node/TypeScript, dogfooded against real repos in four
+of the seven (see Phase 7's multi-language entry). What's left there specifically:
+workspace/monorepo discovery still only understands `apps/*`/`packages/*` +
+pnpm/npm-workspaces, not each new ecosystem's own workspace convention (`uv`/Poetry,
+Cargo, `go.work`) — a real, separate, additional piece of scope, not a quick
+follow-on. Beyond that: **future agent adapters** beyond the initial
+four (Cline, Zed — researched in `docs/decisions/0003-agent-adapter-pattern.md`, not
+built). `login`/auth has no remaining use case now that the dashboard and
+`init <project-id>` are both out of scope — this is a fully local, account-free tool
+by design, not a gap.

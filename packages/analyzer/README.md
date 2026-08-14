@@ -30,14 +30,38 @@ optional `--ai` layer's job to interpret this signal set.
   (`merge-findings.ts` — three distinct strategies: categorical fields report
   `unknown` with full detail on genuine disagreement rather than guessing, boolean
   fields use OR/union semantics with per-source coverage always in the reason text,
-  array fields are a straight union). `PackageAnalyzer` (name/description) and
+  array fields are a straight union). `framework.frontend` specifically also takes an
+  optional `specializes` map (`FRONTEND_SPECIALIZES` in `framework-analyzer.ts`) so a
+  meta-framework in one package and its own base library in another (`nextjs`
+  alongside plain `react`, `sveltekit` alongside plain `svelte`) resolve to the
+  meta-framework rather than a false "disagreement" — found dogfooding against real
+  monorepos (cal.com, SvelteKit's own repo) where a tooling/CLI subpackage only needed
+  the base library directly. Deliberately not extended to `backend` — NestJS doesn't
+  unconditionally imply Express or Fastify the way a Next.js app always has React;
+  that's a real, correctly-reported ambiguity when different packages use different
+  adapters (also found dogfooding, against tRPC's and NestJS's own monorepos, both of
+  which genuinely ship multiple backend integrations side by side). `PackageAnalyzer`
+  (name/description) and
   `GitAnalyzer`'s `projectName` stay root-only — a monorepo's overall identity is
   inherently a root-level concept, not something to infer from a random subpackage.
   Nested workspaces (a subpackage that's itself a monorepo root) aren't walked —
   one level deep only. No real glob/YAML engine — a narrow, hand-written parser for
   `pnpm-workspace.yaml`'s `packages:` key specifically; `!`-prefixed exclusion globs
   are recognized and skipped, never filtered against.
-- **Node/TypeScript ecosystem only.** No Python/Rust/Go/Ruby/Java detection.
+- **Multi-language, dependency-manifest-based.** `FrameworkAnalyzer`/`DatabaseAnalyzer`/
+  `TestAnalyzer`/`DependencyAnalyzer` all read `readAllDependencyNames()`
+  (`read-dependency-names.ts`), which unions declared dependency names across every
+  ecosystem manifest found at a path — package.json (Node), requirements.txt/
+  pyproject.toml/Pipfile (Python), pom.xml/build.gradle[.kts] (Java), Cargo.toml
+  (Rust), go.mod (Go), Gemfile (Ruby), composer.json (PHP), *.csproj (.NET) — see
+  `packages/analyzer/src/ecosystems/`. Frontend-framework detection stays Node/JS-only
+  (see `framework-analyzer.ts`'s comment on why). Workspace/monorepo discovery
+  (`workspace-discovery.ts`) is still `apps/*`/`packages/*` + pnpm/npm-workspaces only —
+  it does **not** yet understand other ecosystems' own workspace conventions (a Python
+  `uv`/Poetry monorepo's `[tool.uv.workspace] members = [...]`, a Cargo workspace's
+  `[workspace] members = [...]`, a Go workspace's `go.work`), a real, stated limitation
+  found dogfooding (see Phase 7's multi-language entry in `docs/plan/03-roadmap.md`),
+  not yet fixed.
 - Every finding carries a three-tier `Confidence` (`detected`/`likely`/`unknown`), not
   a numeric score — a numeric confidence would imply precision this tool can't actually
   justify.

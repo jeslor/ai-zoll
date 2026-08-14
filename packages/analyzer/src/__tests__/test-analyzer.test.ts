@@ -147,4 +147,59 @@ describe("analyzeTests", () => {
     expect(result.e2e).toEqual({ value: null, confidence: "unknown", reason: expect.any(String) });
     expect(result.integration).toEqual({ value: null, confidence: "unknown", reason: expect.any(String) });
   });
+
+  it("detects pytest (Python) via dependency, and Go's file-naming convention via the walk fallback", () => {
+    const python = seed({ "requirements.txt": "pytest==7.4.0\n" });
+    expect(analyzeTests(python).unit).toEqual({ value: true, confidence: "detected", reason: expect.any(String) });
+
+    // Go has no third-party test-runner dependency signal (cargo test/go
+    // test are toolchain built-ins) — detection here relies entirely on
+    // the file-naming walk, at "likely" confidence.
+    const go = seed({
+      "go.mod": "module acme\n",
+      "handler_test.go": "package acme",
+    });
+    expect(analyzeTests(go).unit).toEqual({ value: true, confidence: "likely", reason: expect.any(String) });
+  });
+
+  it("recognizes Java/PHP's NameTest.ext suffix and .NET's NameTests.cs suffix via the file walk", () => {
+    const java = seed({ "pom.xml": "<project></project>", "src/test/BookingServiceTest.java": "class X {}" });
+    expect(analyzeTests(java).unit.value).toBe(true);
+
+    const dotnet = seed({ "App.csproj": "<Project></Project>", "BookingServiceTests.cs": "class X {}" });
+    expect(analyzeTests(dotnet).unit.value).toBe(true);
+  });
+
+  it("recognizes Ruby's RSpec _spec.rb naming and Python's test_*.py prefix via the file walk", () => {
+    const ruby = seed({ Gemfile: 'gem "rails"\n', "spec/booking_spec.rb": "describe X" });
+    expect(analyzeTests(ruby).unit.value).toBe(true);
+
+    const python = seed({ "requirements.txt": "django==4.2\n", "tests/test_booking.py": "def test_x(): pass" });
+    expect(analyzeTests(python).unit.value).toBe(true);
+  });
+
+  it("detects Rust's inline #[test]/#[cfg(test)] convention, which has no separate test-file naming at all", () => {
+    const withInlineTest = seed({
+      "Cargo.toml": '[package]\nname = "acme"\n',
+      "src/lib.rs": "pub fn add(a: i32, b: i32) -> i32 { a + b }\n\n#[test]\nfn it_adds() { assert_eq!(add(1, 1), 2); }",
+    });
+    expect(analyzeTests(withInlineTest).unit).toEqual({
+      value: true,
+      confidence: "likely",
+      reason: expect.any(String),
+    });
+
+    const withCfgTestModule = seed({
+      "Cargo.toml": '[package]\nname = "acme"\n',
+      "src/main.rs": "fn main() {}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn it_works() {}\n}",
+    });
+    expect(analyzeTests(withCfgTestModule).unit.value).toBe(true);
+
+    // A plain .rs file with neither attribute must not false-positive.
+    const withoutTests = seed({
+      "Cargo.toml": '[package]\nname = "acme"\n',
+      "src/main.rs": "fn main() { println!(\"hello\"); }",
+    });
+    expect(analyzeTests(withoutTests).unit.value).toBe(false);
+  });
 });

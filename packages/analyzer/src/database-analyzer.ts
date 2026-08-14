@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Confidence, Finding } from "./finding";
-import { readDependencyNames } from "./read-package-json";
+import { readAllDependencyNames } from "./read-dependency-names";
 
 export interface DatabaseAnalyzerResult {
   database: Finding<string>;
@@ -40,13 +40,98 @@ function extractPrismaProvider(schemaContent: string): string | null {
   return providerMatch ? (providerMatch[1] ?? null) : null;
 }
 
-/** Both common Postgres client packages — missing either would miss real projects. */
+/** Raw database driver/provider packages, one block per ecosystem — the same "detected package IS evidence of a driver, not proof it's wired up" caveat applies to every entry, not just the original Node ones. */
 const DRIVER_TO_DATABASE: Array<[dependency: string, database: string]> = [
+  // Node/JS
   ["pg", "postgresql"],
   ["postgres", "postgresql"],
   ["mysql2", "mysql"],
   ["better-sqlite3", "sqlite"],
+  // Python — "psycopg" (no suffix) is psycopg3, a separate, newer package
+  // from "psycopg2"/"psycopg2-binary", found dogfooding against a real
+  // FastAPI template that used it exclusively.
+  ["psycopg2", "postgresql"],
+  ["psycopg2-binary", "postgresql"],
+  ["psycopg", "postgresql"],
+  ["asyncpg", "postgresql"],
+  ["pymysql", "mysql"],
+  ["mysqlclient", "mysql"],
+  ["pymongo", "mongodb"],
+  // Java
+  ["postgresql", "postgresql"],
+  ["mysql-connector-j", "mysql"],
+  ["mysql-connector-java", "mysql"],
+  // Rust
+  ["tokio-postgres", "postgresql"],
+  ["mysql_async", "mysql"],
+  // Go
+  ["github.com/lib/pq", "postgresql"],
+  ["github.com/jackc/pgx/v5", "postgresql"],
+  ["github.com/go-sql-driver/mysql", "mysql"],
+  // Ruby
+  ["pg", "postgresql"],
+  ["mysql2", "mysql"],
+  ["sqlite3", "sqlite"],
+  // .NET — also implies EF Core as the ORM, see ORM_SIGNALS below
+  ["Npgsql", "postgresql"],
+  ["Npgsql.EntityFrameworkCore.PostgreSQL", "postgresql"],
+  ["Microsoft.EntityFrameworkCore.SqlServer", "sqlserver"],
+  ["Pomelo.EntityFrameworkCore.MySql", "mysql"],
+  ["Microsoft.EntityFrameworkCore.Sqlite", "sqlite"],
 ];
+
+/**
+ * ORM/ODM dependency signals (checked after the Prisma-schema-file special
+ * case below, and after drizzle/typeorm's existing dedicated branches — see
+ * analyzeDatabase). One block per ecosystem. Some entries are the framework
+ * itself rather than a separate ORM package, because that ecosystem bundles
+ * its ORM into the framework (Django's own ORM, Rails' ActiveRecord,
+ * Laravel's Eloquent) — checking the same dependency name here and in
+ * `BACKEND_SIGNALS` (framework-analyzer.ts) is intentional, not a bug: two
+ * independent analyzers legitimately draw two different conclusions from
+ * the same fact.
+ */
+const ORM_SIGNALS: Array<[dependency: string, value: string]> = [
+  // Python — sqlmodel (Pydantic + SQLAlchemy combined, from the same
+  // author as FastAPI) is checked before plain sqlalchemy since a sqlmodel
+  // project also commonly has sqlalchemy as sqlmodel's own transitive
+  // dependency, and sqlmodel is the more specific, informative fact.
+  ["sqlmodel", "sqlmodel"],
+  ["sqlalchemy", "sqlalchemy"],
+  ["django", "django-orm"],
+  // Java
+  ["spring-boot-starter-data-jpa", "hibernate"],
+  ["hibernate-core", "hibernate"],
+  ["mybatis", "mybatis"],
+  // Rust
+  ["diesel", "diesel"],
+  ["sea-orm", "sea-orm"],
+  ["sqlx", "sqlx"],
+  // Go
+  ["gorm.io/gorm", "gorm"],
+  // Ruby
+  ["activerecord", "activerecord"],
+  ["rails", "activerecord"],
+  ["sequel", "sequel"],
+  // PHP
+  ["doctrine/orm", "doctrine"],
+  ["laravel/framework", "eloquent"],
+  // .NET
+  ["Microsoft.EntityFrameworkCore", "efcore"],
+  ["Microsoft.EntityFrameworkCore.SqlServer", "efcore"],
+  ["Npgsql.EntityFrameworkCore.PostgreSQL", "efcore"],
+  ["Pomelo.EntityFrameworkCore.MySql", "efcore"],
+  ["Microsoft.EntityFrameworkCore.Sqlite", "efcore"],
+];
+
+function matchOrmSignal(dependencyNames: Set<string>): Finding<string> {
+  for (const [dependency, value] of ORM_SIGNALS) {
+    if (dependencyNames.has(dependency)) {
+      return { value, confidence: "detected", reason: `found "${dependency}" in dependencies` };
+    }
+  }
+  return UNKNOWN;
+}
 
 function inferDatabaseFromDriver(dependencyNames: Set<string>): Finding<string> {
   for (const [dependency, database] of DRIVER_TO_DATABASE) {
@@ -64,10 +149,11 @@ function inferDatabaseFromDriver(dependencyNames: Set<string>): Finding<string> 
 /**
  * Repo-root only (see packages/analyzer/README.md). Checked in this order —
  * a stated simplification, not a silent one: Prisma (via its own schema
- * file, the strongest possible signal) first, then drizzle, then typeorm.
- * A repo mid-migration between ORMs (more common than it sounds) will only
- * ever report the first one found; this is a known v1 limitation rather
- * than detect-both-and-flag-ambiguous, which is more than this slice needs.
+ * file, the strongest possible signal) first, then drizzle, then typeorm,
+ * then mongoose, then every other ecosystem's `ORM_SIGNALS` entry. A repo
+ * mid-migration between ORMs (more common than it sounds) will only ever
+ * report the first one found; this is a known v1 limitation rather than
+ * detect-both-and-flag-ambiguous, which is more than this slice needs.
  */
 export function analyzeDatabase(repoPath: string): DatabaseAnalyzerResult {
   const schemaPath = path.join(repoPath, "prisma", "schema.prisma");
@@ -94,7 +180,7 @@ export function analyzeDatabase(repoPath: string): DatabaseAnalyzerResult {
     };
   }
 
-  const dependencyNames = readDependencyNames(repoPath);
+  const dependencyNames = readAllDependencyNames(repoPath);
 
   if (dependencyNames.has("drizzle-orm")) {
     return {
@@ -120,5 +206,18 @@ export function analyzeDatabase(repoPath: string): DatabaseAnalyzerResult {
     };
   }
 
-  return { database: UNKNOWN, orm: UNKNOWN };
+  const orm = matchOrmSignal(dependencyNames);
+  if (orm.confidence !== "unknown") {
+    return { orm, database: inferDatabaseFromDriver(dependencyNames) };
+  }
+
+  // No ORM detected at all — still worth checking for a raw driver package
+  // (a real, common shape in Go/Rust backends especially, where hand-written
+  // SQL over a raw driver is idiomatic, not a stopgap before "real" ORM
+  // adoption). A deliberate, small behavior change from this analyzer's
+  // pre-multi-language shape, where a driver was only ever checked
+  // *alongside* a confirmed ORM, never standalone — that left every
+  // ORM-less-but-has-a-real-driver project reporting `database: unknown`
+  // for no good reason.
+  return { database: inferDatabaseFromDriver(dependencyNames), orm: UNKNOWN };
 }

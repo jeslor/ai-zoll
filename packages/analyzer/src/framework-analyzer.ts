@@ -1,5 +1,5 @@
 import type { Finding } from "./finding";
-import { readDependencyNames } from "./read-package-json";
+import { readAllDependencyNames } from "./read-dependency-names";
 
 export interface FrameworkAnalyzerResult {
   frontend: Finding<string>;
@@ -22,10 +22,11 @@ const UNKNOWN: Finding<string> = {
  * appending. Astro doesn't strictly require react/vue but commonly
  * integrates with either, so it's still checked before them defensively.
  *
- * Still out of scope: Django/FastAPI (spec's example stack values for them
- * are real, but they're Python — no `package.json` signal exists to detect
- * from at all; this analyzer is npm-dependency-based only, per this v1's
- * Node/TypeScript-ecosystem scope).
+ * Frontend framework detection stays Node/JS-only — "frontend framework" as
+ * a Blueprint concept doesn't have a real equivalent in the other
+ * ecosystems `readAllDependencyNames` now covers (Python/Java/Rust/Go/
+ * Ruby/PHP/.NET are backend/systems ecosystems; forcing an entry for e.g. a
+ * Python templating engine would be a guess, not a fact).
  */
 const FRONTEND_SIGNALS: Array<[dependency: string, value: string]> = [
   ["next", "nextjs"],
@@ -39,13 +40,79 @@ const FRONTEND_SIGNALS: Array<[dependency: string, value: string]> = [
   ["@angular/core", "angular"],
 ];
 
+/**
+ * The same "always has" relationships documented on FRONTEND_SIGNALS above,
+ * reshaped for cross-package merging (see merge-findings.ts's
+ * `specializes` parameter): a monorepo where one package depends on "next"
+ * and another depends only on "react" isn't reporting conflicting facts —
+ * every Next.js app has react too. Astro is deliberately not here, per the
+ * same comment above: it commonly but doesn't unconditionally imply
+ * react/vue, so treating it as a guaranteed specialization would be a
+ * guess, not a fact.
+ */
+export const FRONTEND_SPECIALIZES: Record<string, string> = {
+  nextjs: "react",
+  remix: "react",
+  nuxt: "vue",
+  sveltekit: "svelte",
+};
+
+/**
+ * One block per ecosystem, each internally most-specific-first where that
+ * matters (e.g. FastAPI before the more generic ASGI libraries it's built
+ * on). Cross-ecosystem ordering is irrelevant in practice — two different
+ * ecosystems' manifests essentially never coexist ambiguously at the same
+ * path — so each language's block is simply appended after the existing
+ * Node/JS entries, not interleaved with them.
+ */
 const BACKEND_SIGNALS: Array<[dependency: string, value: string]> = [
+  // Node/JS
   ["@nestjs/core", "nestjs"],
   ["express", "express"],
   ["fastify", "fastify"],
   ["koa", "koa"],
   ["@hapi/hapi", "hapi"],
   ["hono", "hono"],
+  // Python (requirements.txt / pyproject.toml / Pipfile)
+  ["fastapi", "fastapi"],
+  ["django", "django"],
+  ["flask", "flask"],
+  ["tornado", "tornado"],
+  ["sanic", "sanic"],
+  ["aiohttp", "aiohttp"],
+  // Java (pom.xml artifactId / build.gradle[.kts] dependency artifact).
+  // Both starter names map to the same value: "-webmvc" is Spring Boot 4's
+  // renamed successor to "-web" (found dogfooding against a real Spring
+  // Boot 4 app, spring-petclinic, whose build.gradle only had the new name
+  // — the old name alone would have missed it entirely).
+  ["spring-boot-starter-web", "spring-boot"],
+  ["spring-boot-starter-webmvc", "spring-boot"],
+  ["spring-webmvc", "spring"],
+  ["quarkus-resteasy-reactive", "quarkus"],
+  ["quarkus-resteasy", "quarkus"],
+  ["micronaut-http-server-netty", "micronaut"],
+  // Rust (Cargo.toml)
+  ["axum", "axum"],
+  ["actix-web", "actix-web"],
+  ["rocket", "rocket"],
+  ["warp", "warp"],
+  // Go (go.mod — full module path, no separate short name)
+  ["github.com/gin-gonic/gin", "gin"],
+  ["github.com/labstack/echo/v4", "echo"],
+  ["github.com/gofiber/fiber/v2", "fiber"],
+  ["github.com/go-chi/chi/v5", "chi"],
+  // Ruby (Gemfile)
+  ["rails", "rails"],
+  ["sinatra", "sinatra"],
+  ["hanami", "hanami"],
+  // PHP (composer.json)
+  ["laravel/framework", "laravel"],
+  ["symfony/framework-bundle", "symfony"],
+  ["slim/slim", "slim"],
+  // .NET (*.csproj — Sdk attribute injected as a pseudo-dependency by
+  // ecosystems/dotnet.ts, since a real ASP.NET Core web project usually has
+  // no explicit PackageReference for the framework itself)
+  ["Microsoft.NET.Sdk.Web", "aspnet"],
 ];
 
 function matchSignal(
@@ -61,14 +128,17 @@ function matchSignal(
 }
 
 /**
- * Repo-root package.json only — no monorepo/workspace awareness (see
+ * Repo-root manifests only — no monorepo/workspace awareness (see
  * packages/analyzer/README.md). "unknown" means "no recognized signal at
  * root", not "definitely no such framework" — a subpackage may use one this
  * v1 doesn't see, or the project may use a framework not yet in the list
- * above.
+ * above. `readAllDependencyNames` unions every ecosystem manifest found at
+ * this path (package.json, requirements.txt/pyproject.toml, pom.xml/
+ * build.gradle, Cargo.toml, go.mod, Gemfile, composer.json, *.csproj) — see
+ * read-dependency-names.ts.
  */
 export function analyzeFramework(repoPath: string): FrameworkAnalyzerResult {
-  const dependencyNames = readDependencyNames(repoPath);
+  const dependencyNames = readAllDependencyNames(repoPath);
 
   return {
     frontend: matchSignal(dependencyNames, FRONTEND_SIGNALS),

@@ -1,6 +1,6 @@
 import { analyzePackage } from "./package-analyzer";
 import type { PackageAnalyzerResult } from "./package-analyzer";
-import { analyzeFramework } from "./framework-analyzer";
+import { analyzeFramework, FRONTEND_SPECIALIZES } from "./framework-analyzer";
 import type { FrameworkAnalyzerResult } from "./framework-analyzer";
 import { analyzeDatabase } from "./database-analyzer";
 import type { DatabaseAnalyzerResult } from "./database-analyzer";
@@ -66,7 +66,15 @@ export function analyzeRepository(repoPath: string): RepositoryAnalysis {
     package: analyzePackage(repoPath),
     git: analyzeGit(repoPath),
     framework: {
-      frontend: mergeCategorical(attribute(locations, frameworkResults.map((r) => r.frontend))),
+      // Only frontend gets `specializes` — no equivalent unconditional
+      // meta/base relationship exists for backend (NestJS runs on either
+      // Express or Fastify depending on which adapter package is used;
+      // it doesn't unconditionally imply one, unlike a Next.js app always
+      // having react). See merge-findings.ts's docblock.
+      frontend: mergeCategorical(
+        attribute(locations, frameworkResults.map((r) => r.frontend)),
+        FRONTEND_SPECIALIZES,
+      ),
       backend: mergeCategorical(attribute(locations, frameworkResults.map((r) => r.backend))),
     },
     database: {

@@ -4,7 +4,7 @@ export { isExcludedPath } from "./exclusion";
 export { analyzePackage } from "./package-analyzer";
 export type { PackageAnalyzerResult } from "./package-analyzer";
 
-export { analyzeFramework } from "./framework-analyzer";
+export { analyzeFramework, FRONTEND_SPECIALIZES } from "./framework-analyzer";
 export type { FrameworkAnalyzerResult } from "./framework-analyzer";
 
 export { analyzeDatabase } from "./database-analyzer";
