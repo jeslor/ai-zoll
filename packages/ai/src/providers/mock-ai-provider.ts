@@ -4,7 +4,9 @@ import {
   BlueprintValidationError,
   type ProjectBlueprint,
 } from "@ai-zoll/blueprint";
+import type { RepositoryAnalysis } from "@ai-zoll/analyzer";
 import type { AIProvider, BlueprintInput } from "../provider";
+import type { RepositoryInsights } from "../insights";
 
 /**
  * Deterministic, non-AI implementation of AIProvider. Stamps the current
@@ -27,5 +29,28 @@ export class MockAIProvider implements AIProvider {
     }
 
     return result.data;
+  }
+
+  /**
+   * No interpretation performed — Mock never calls a real LLM, matching
+   * generateBlueprint's zero-AI guarantee. Exists purely for interface
+   * conformance and to keep this path testable without a key; the CLI
+   * never actually calls interpretRepository on a Mock instance, since
+   * `ai-zoll analyze --ai` only invokes it when `--ai` selected the real
+   * provider (see apps/cli/src/commands/analyze.ts).
+   */
+  async interpretRepository(_analysis: RepositoryAnalysis): Promise<RepositoryInsights> {
+    return {
+      businessDomains: [],
+      modules: [],
+      architecturalPatterns: [],
+      conventions: [],
+      importantDependencies: [],
+      testingPatterns: [],
+      securityPatterns: [],
+      undocumentedConventions: [],
+      inconsistencies: [],
+      missingDocumentation: [],
+    };
   }
 }

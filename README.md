@@ -6,7 +6,7 @@
 
 **AI Zoll is a CLI that prepares, structures, and maintains the context AI coding
 agents need to work effectively.** It does not write your application code — Claude
-Code, Cursor, Codex, and Copilot remain the builders. Zoll prepares the environment in
+Code, Cursor, Codex, Copilot, etc, remain the builders. Zoll prepares the environment in
 which they build, and keeps it in sync as your project or your chosen agent changes.
 
 Fully local, fully self-contained: no dashboard, no server, no account, no database.
