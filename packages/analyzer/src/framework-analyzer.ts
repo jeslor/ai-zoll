@@ -14,19 +14,28 @@ const UNKNOWN: Finding<string> = {
 
 /**
  * Order matters: each meta-framework transitively/directly depends on its
- * base framework too (a Next.js app always has "react" in dependencies), so
- * the first match in "most specific first" order is the correct one, not an
- * arbitrary pick. Adding a new entry means reasoning about where it sits
- * relative to the existing ones, not just appending.
+ * base framework too (a Next.js app always has "react" in dependencies, a
+ * Nuxt app always has "vue", a SvelteKit app always has "svelte", a Remix
+ * app always has "react"), so the first match in "most specific first"
+ * order is the correct one, not an arbitrary pick. Adding a new entry means
+ * reasoning about where it sits relative to the existing ones, not just
+ * appending. Astro doesn't strictly require react/vue but commonly
+ * integrates with either, so it's still checked before them defensively.
  *
- * Deliberately NOT covered in v1 (a documented scope cut, not an oversight):
- * Remix, SvelteKit, Nuxt, Astro on the frontend; Koa, Hapi, Hono on the
- * backend.
+ * Still out of scope: Django/FastAPI (spec's example stack values for them
+ * are real, but they're Python — no `package.json` signal exists to detect
+ * from at all; this analyzer is npm-dependency-based only, per this v1's
+ * Node/TypeScript-ecosystem scope).
  */
 const FRONTEND_SIGNALS: Array<[dependency: string, value: string]> = [
   ["next", "nextjs"],
+  ["@remix-run/react", "remix"],
+  ["nuxt", "nuxt"],
+  ["@sveltejs/kit", "sveltekit"],
+  ["astro", "astro"],
   ["react", "react"],
   ["vue", "vue"],
+  ["svelte", "svelte"],
   ["@angular/core", "angular"],
 ];
 
@@ -34,6 +43,9 @@ const BACKEND_SIGNALS: Array<[dependency: string, value: string]> = [
   ["@nestjs/core", "nestjs"],
   ["express", "express"],
   ["fastify", "fastify"],
+  ["koa", "koa"],
+  ["@hapi/hapi", "hapi"],
+  ["hono", "hono"],
 ];
 
 function matchSignal(

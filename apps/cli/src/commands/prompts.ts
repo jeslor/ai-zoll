@@ -64,7 +64,10 @@ export async function promptArchitectureStyle(defaultValue?: ArchitectureStyle):
 
 const FRONTEND_CHOICES: string[] = ["nextjs", "react", "vue", "angular", "none"];
 const BACKEND_CHOICES: string[] = ["nestjs", "express", "fastify", "django", "fastapi", "none"];
-const DATABASE_CHOICES: string[] = ["postgresql", "mysql", "mongodb", "sqlite", "redis", "other"];
+// "none" was missing here (unlike frontend/backend/orm) — a real frontend-only
+// project with no database at all was forced into a dishonest "other" (found
+// via dogfooding against a real Next.js frontend repo with no backend/DB).
+const DATABASE_CHOICES: string[] = ["postgresql", "mysql", "mongodb", "sqlite", "redis", "other", "none"];
 const ORM_CHOICES: string[] = ["prisma", "drizzle", "typeorm", "sqlalchemy", "none"];
 
 export async function promptFrontend(defaultValue?: string): Promise<string> {

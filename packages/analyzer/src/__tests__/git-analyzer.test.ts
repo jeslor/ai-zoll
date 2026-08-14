@@ -89,6 +89,15 @@ describe("analyzeGit — hasMonorepoLayout", () => {
     expect(analyzeGit(dir).hasMonorepoLayout.value).toBe(true);
   });
 
+  it("also detects a custom glob root declared in pnpm-workspace.yaml (delegated to workspace-discovery.ts)", () => {
+    const dir = seed({
+      "services/billing/package.json": JSON.stringify({ name: "billing" }),
+      "pnpm-workspace.yaml": 'packages:\n  - "services/*"\n',
+    });
+
+    expect(analyzeGit(dir).hasMonorepoLayout.value).toBe(true);
+  });
+
   it("returns unknown for a plain single-package repo", () => {
     const dir = seed({ "package.json": JSON.stringify({ name: "single" }), "src/index.ts": "" });
 

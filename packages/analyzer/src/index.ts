@@ -24,3 +24,9 @@ export type { DirectoryAnalyzerResult } from "./directory-analyzer";
 
 export { analyzeRepository } from "./analyze-repository";
 export type { RepositoryAnalysis } from "./analyze-repository";
+
+export { discoverWorkspacePackages } from "./workspace-discovery";
+export type { WorkspacePackage } from "./workspace-discovery";
+
+export { mergeArray, mergeBoolean, mergeCategorical } from "./merge-findings";
+export type { AttributedFinding } from "./merge-findings";

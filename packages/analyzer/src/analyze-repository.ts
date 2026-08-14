@@ -12,6 +12,10 @@ import { analyzeDependencies } from "./dependency-analyzer";
 import type { DependencyAnalyzerResult } from "./dependency-analyzer";
 import { analyzeDirectory } from "./directory-analyzer";
 import type { DirectoryAnalyzerResult } from "./directory-analyzer";
+import { discoverWorkspacePackages } from "./workspace-discovery";
+import { mergeArray, mergeBoolean, mergeCategorical } from "./merge-findings";
+import type { AttributedFinding } from "./merge-findings";
+import type { Finding } from "./finding";
 
 export interface RepositoryAnalysis {
   package: PackageAnalyzerResult;
@@ -23,19 +27,63 @@ export interface RepositoryAnalysis {
   directory: DirectoryAnalyzerResult;
 }
 
+interface Location {
+  path: string;
+  relativePath: string;
+}
+
+function attribute<T>(locations: Location[], findings: Finding<T>[]): AttributedFinding<T>[] {
+  return findings.map((finding, i) => ({ source: locations[i]!.relativePath, finding }));
+}
+
 /**
  * Runs every registered analyzer — no subsetting, per
  * .claude/skills/add-repo-analyzer/SKILL.md ("don't hardcode a subset if the
- * orchestrator is supposed to run 'all analyzers'").
+ * orchestrator is supposed to run 'all analyzers'"). `PackageAnalyzer` and
+ * `GitAnalyzer` stay root-only (name/description/git-remote are inherently
+ * root-level concepts). The other five analyzers each already accept an
+ * arbitrary path — they're unchanged; this function runs them against the
+ * repo root plus every discovered workspace package, then merges the
+ * per-location findings with the matching strategy (see merge-findings.ts).
+ * A single-package repo (no workspace packages discovered) degrades to
+ * exactly one location, and every merge function passes that finding
+ * through completely unchanged — this is what keeps every pre-existing,
+ * non-monorepo analyzer test passing without modification.
  */
 export function analyzeRepository(repoPath: string): RepositoryAnalysis {
+  const locations: Location[] = [
+    { path: repoPath, relativePath: "root" },
+    ...discoverWorkspacePackages(repoPath).map((pkg) => ({ path: pkg.path, relativePath: pkg.relativePath })),
+  ];
+
+  const frameworkResults = locations.map((loc) => analyzeFramework(loc.path));
+  const databaseResults = locations.map((loc) => analyzeDatabase(loc.path));
+  const testingResults = locations.map((loc) => analyzeTests(loc.path));
+  const dependencyResults = locations.map((loc) => analyzeDependencies(loc.path));
+  const directoryResults = locations.map((loc) => analyzeDirectory(loc.path));
+
   return {
     package: analyzePackage(repoPath),
-    framework: analyzeFramework(repoPath),
-    database: analyzeDatabase(repoPath),
-    testing: analyzeTests(repoPath),
     git: analyzeGit(repoPath),
-    dependency: analyzeDependencies(repoPath),
-    directory: analyzeDirectory(repoPath),
+    framework: {
+      frontend: mergeCategorical(attribute(locations, frameworkResults.map((r) => r.frontend))),
+      backend: mergeCategorical(attribute(locations, frameworkResults.map((r) => r.backend))),
+    },
+    database: {
+      database: mergeCategorical(attribute(locations, databaseResults.map((r) => r.database))),
+      orm: mergeCategorical(attribute(locations, databaseResults.map((r) => r.orm))),
+    },
+    testing: {
+      unit: mergeBoolean(attribute(locations, testingResults.map((r) => r.unit))),
+      integration: mergeBoolean(attribute(locations, testingResults.map((r) => r.integration))),
+      e2e: mergeBoolean(attribute(locations, testingResults.map((r) => r.e2e))),
+    },
+    dependency: {
+      authentication: mergeCategorical(attribute(locations, dependencyResults.map((r) => r.authentication))),
+      authorization: mergeCategorical(attribute(locations, dependencyResults.map((r) => r.authorization))),
+    },
+    directory: {
+      signals: mergeArray(attribute(locations, directoryResults.map((r) => r.signals))),
+    },
   };
 }

@@ -7,11 +7,20 @@ export interface PackageAnalyzerResult {
   description: Finding<string>;
 }
 
-const UNKNOWN_STRING: Finding<string> = {
+const UNKNOWN_NO_FILE: Finding<string> = {
   value: null,
   confidence: "unknown",
-  reason: "no package.json found at the repo root, or it has no usable field",
+  reason: "no package.json found at the repo root, or it isn't valid JSON",
 };
+
+/** Distinct from UNKNOWN_NO_FILE — the file exists and parsed fine, this one field just isn't set. */
+function unknownField(fieldName: string): Finding<string> {
+  return {
+    value: null,
+    confidence: "unknown",
+    reason: `package.json exists but has no usable "${fieldName}" field`,
+  };
+}
 
 /**
  * Reads the repo root's package.json only — no monorepo/workspace awareness
@@ -26,11 +35,11 @@ export function analyzePackage(repoPath: string): PackageAnalyzerResult {
   try {
     raw = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
   } catch {
-    return { name: UNKNOWN_STRING, description: UNKNOWN_STRING };
+    return { name: UNKNOWN_NO_FILE, description: UNKNOWN_NO_FILE };
   }
 
   if (typeof raw !== "object" || raw === null) {
-    return { name: UNKNOWN_STRING, description: UNKNOWN_STRING };
+    return { name: UNKNOWN_NO_FILE, description: UNKNOWN_NO_FILE };
   }
   const pkg = raw as Record<string, unknown>;
 
@@ -53,7 +62,7 @@ export function analyzePackage(repoPath: string): PackageAnalyzerResult {
           confidence,
           reason: `found "name" in package.json${monorepoReason}`,
         }
-      : UNKNOWN_STRING;
+      : unknownField("name");
 
   const description =
     typeof pkg.description === "string" && pkg.description.trim().length > 0
@@ -62,7 +71,7 @@ export function analyzePackage(repoPath: string): PackageAnalyzerResult {
           confidence,
           reason: `found "description" in package.json${monorepoReason}`,
         }
-      : UNKNOWN_STRING;
+      : unknownField("description");
 
   return { name, description };
 }

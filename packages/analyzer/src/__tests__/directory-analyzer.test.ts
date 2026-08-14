@@ -77,6 +77,50 @@ describe("analyzeDirectory", () => {
     });
   });
 
+  it("recognizes standard React/Next.js folders (components, hooks, lib, store)", () => {
+    const dir = seed(["components", "hooks", "lib", "store"]);
+
+    expect(analyzeDirectory(dir).signals.value?.sort()).toEqual(["components", "hooks", "lib", "store"]);
+  });
+
+  it("recognizes Feature-Sliced Design layers", () => {
+    const dir = seed(["features", "widgets", "shared", "entities"]);
+
+    expect(analyzeDirectory(dir).signals.value?.sort()).toEqual(["entities", "features", "shared", "widgets"]);
+  });
+
+  it("recognizes Atomic Design folders", () => {
+    const dir = seed(["atoms", "molecules", "organisms", "templates"]);
+
+    expect(analyzeDirectory(dir).signals.value?.sort()).toEqual([
+      "atoms",
+      "molecules",
+      "organisms",
+      "templates",
+    ]);
+  });
+
+  it("recognizes a real-world Next.js frontend layout with no src/ directory (found via dogfooding against a real repo)", () => {
+    // Regression test for the exact structure that previously returned
+    // "unknown" against a real cloned Next.js app: app/, components/, lib/,
+    // store/ at the repo root, no src/ dir at all.
+    const files: Record<string, string> = {
+      "app/.gitkeep": "",
+      "components/.gitkeep": "",
+      "lib/.gitkeep": "",
+      "store/.gitkeep": "",
+      "public/.gitkeep": "",
+    };
+    const dir = makeFixtureRepo(files);
+    tempDirs.push(dir);
+
+    const result = analyzeDirectory(dir);
+
+    // "app" and "public" aren't in the candidate list (routing/static-asset
+    // conventions, not architectural ones) — only components/lib/store are.
+    expect(result.signals.value?.sort()).toEqual(["components", "lib", "store"]);
+  });
+
   it("never claims to know the architecture style — only reports directory names", () => {
     // Guards against a future contributor reintroducing the classification
     // this analyzer deliberately omits (docs/decisions/0004).

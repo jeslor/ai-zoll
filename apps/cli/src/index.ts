@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { runInitCommand } from "./commands/init";
 import { runSyncCommand } from "./commands/sync";
+import { runAnalyzeCommand } from "./commands/analyze";
 
 async function main(): Promise<void> {
   const command = process.argv[2];
@@ -16,7 +17,14 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log("Usage: ai-zoll init [--ai]\n       ai-zoll sync [agent]");
+  if (command === "analyze") {
+    await runAnalyzeCommand({ useAI: args.includes("--ai") });
+    return;
+  }
+
+  console.log(
+    "Usage: ai-zoll init [--ai]\n       ai-zoll sync [agent]\n       ai-zoll analyze [--ai]",
+  );
   process.exitCode = 1;
 }
 
