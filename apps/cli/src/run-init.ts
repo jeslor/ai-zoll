@@ -6,7 +6,6 @@ import type { GeneratedFile } from "@ai-zoll/shared";
 import { getAgentAdapter } from "@ai-zoll/agents";
 import type { SupportedAgentId } from "@ai-zoll/agents";
 import { selectAIProvider } from "./select-ai-provider";
-import { registerWithApi } from "./register-with-api";
 import { mergeManagedContent } from "./managed-content";
 import { writeProjectState } from "./project-state";
 
@@ -21,8 +20,6 @@ export interface RunInitOptions {
 export interface RunInitResult {
   outputDir: string;
   files: GeneratedFile[];
-  /** Set when AI_ZOLL_API_URL is configured and registration succeeded. */
-  projectId: string | null;
 }
 
 /**
@@ -98,7 +95,5 @@ export async function runInit(options: RunInitOptions): Promise<RunInitResult> {
     generatedPaths: files.map((file) => file.path),
   });
 
-  const projectId = await registerWithApi(blueprint);
-
-  return { outputDir, files, projectId };
+  return { outputDir, files };
 }

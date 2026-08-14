@@ -1,6 +1,10 @@
 # 04 — Database Model & API Design
 
 > Condensed from `docs/PRODUCT_SPEC.md` §31, 32. Read the spec for full detail.
+>
+> **Fully superseded — historical only.** The CLI-only pivot (see `CLAUDE.md` and
+> `docs/plan/03-roadmap.md`'s top note) removed `apps/api` and its database entirely.
+> There is no database and no REST API in this project anymore.
 
 ## Database model
 

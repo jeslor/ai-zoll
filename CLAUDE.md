@@ -4,17 +4,27 @@ Instructions for Claude Code (or any coding agent) working in this repository.
 
 ## What this project is
 
-AI Zoll is a platform + CLI that prepares software projects for AI-assisted
-development. It does not write application code for the end user and does not compete
-with Claude Code / Cursor / Codex / Copilot — it generates the **Project Blueprint** and
-the AI-context layer (docs, `AGENTS.md`, skills, agent-specific config) that those tools
-need to work effectively on a project, for both brand-new projects and existing
-repositories.
+AI Zoll is a **CLI** that prepares software projects for AI-assisted development. It
+does not write application code for the end user and does not compete with Claude Code
+/ Cursor / Codex / Copilot — it generates the **Project Blueprint** and the AI-context
+layer (docs, `AGENTS.md`, skills, agent-specific config) that those tools need to work
+effectively on a project, for both brand-new projects (`init`) and existing
+repositories (`analyze`), and keeps that context in sync as the project or the chosen
+agent changes (`sync`).
 
-Full source-of-truth spec: [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md). Everything
-below is a condensed, operational summary of that document for day-to-day development.
-If this file and the spec ever disagree, the spec wins — fix this file, not the other
-way around.
+**Product pivot (superseding the original dashboard-first spec):** this is now a
+fully self-contained CLI — no web dashboard, no server-side API, no database. Every
+run is local. AI is never required: `MockAIProvider` (deterministic) is the default
+for every command; the real, LLM-backed `ClaudeAIProvider` is a strict, explicit
+opt-in via `--ai`, never auto-triggered just because a credential happens to be
+present. See `docs/plan/03-roadmap.md`'s Phase 5/7 sections for how this was built and
+verified (including several real-repo dogfooding passes, not just fixtures).
+
+Full source-of-truth spec: [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) — written for
+the original, broader (dashboard + API) vision. Where it describes the dashboard, API,
+or database, treat those sections as historical/superseded by the pivot above, not
+current direction. Everything else below is a condensed, operational summary for
+day-to-day development.
 
 Read next, in order:
 1. [`docs/plan/00-overview.md`](docs/plan/00-overview.md) — vision & philosophy
@@ -42,8 +52,8 @@ these choices.
 3. Do not introduce dependencies without explaining why they are necessary.
 4. Prefer existing packages already present in the repository.
 5. All business logic belongs in appropriate modules.
-6. Keep the `blueprint` package independent from the web application.
-7. Keep the CLI independent from the dashboard UI.
+6. Keep the `blueprint` package independent from the web application. *(Moot post-pivot — there is no web application. Kept for history; the spirit lives on as "keep `packages/blueprint` independent of `apps/cli`.")*
+7. Keep the CLI independent from the dashboard UI. *(Moot post-pivot — there is no dashboard.)*
 8. Never couple the canonical blueprint to a single AI coding agent.
 9. Never allow an LLM response to bypass schema validation.
 10. Existing-project generation must be non-destructive.
@@ -66,22 +76,19 @@ behavior preserved.
 ## Monorepo map
 
 ```
-apps/web        Next.js dashboard
-apps/api        NestJS REST API
-apps/cli        Node/TypeScript CLI (npx ai-zoll ...)
+apps/cli              Node/TypeScript CLI (npx ai-zoll init|sync|analyze) — the only app
 packages/blueprint    Blueprint schema (Zod), types, validation — the core, agent-agnostic
 packages/generators   Deterministic template engine: blueprint -> workspace files
 packages/agents       AgentAdapter implementations: claude/, cursor/, codex/, copilot/
-packages/templates    Raw templates consumed by generators
-packages/analyzer     Deterministic repo analyzers (framework/db/test/git/config/...)
-packages/ai           AIProvider abstraction (mock provider first, real provider later)
+packages/templates    Raw templates consumed by generators (currently unused — see its README)
+packages/analyzer     Deterministic repo analyzers (framework/db/test/git/directory/dependency/package), monorepo-aware
+packages/ai           AIProvider abstraction: MockAIProvider (default) + ClaudeAIProvider (--ai opt-in)
 packages/shared       Cross-cutting types/utilities with no framework dependency
-prisma/               Database schema for the API's PostgreSQL store
 ```
 
-Currently this is an empty skeleton (placeholder `package.json` per package, no
-framework deps installed, no business logic). Real implementation starts at Phase 0 —
-see the roadmap for what's next.
+All real, tested, built — this is not a skeleton. See `docs/plan/03-roadmap.md` for
+current phase status per package (most are marked done; `packages/analyzer` and
+`apps/cli` are the most actively developed).
 
 ## Where things live
 
