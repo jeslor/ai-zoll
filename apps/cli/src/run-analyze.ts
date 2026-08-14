@@ -4,6 +4,7 @@ import type { BlueprintInput } from "@ai-zoll/ai";
 import { generateWorkspace, assertNoDuplicatePaths } from "@ai-zoll/generators";
 import { getAgentAdapter } from "@ai-zoll/agents";
 import type { SupportedAgentId } from "@ai-zoll/agents";
+import { analyzeDirectory } from "@ai-zoll/analyzer";
 import { selectAIProvider } from "./select-ai-provider";
 import { applyGeneratedFiles } from "./apply-generated-files";
 import type { ApplyResult } from "./apply-generated-files";
@@ -15,6 +16,14 @@ export interface RunAnalyzeOptions {
   input: BlueprintInput;
   agentId: SupportedAgentId;
   useAI?: boolean;
+  /**
+   * Pre-rendered CONVENTIONS.md content (see `generate-conventions-md.ts`),
+   * already computed by the caller from the same `RepositoryInsights` it
+   * used for its own console report — one AI call serves both, `runAnalyze`
+   * itself never calls `interpretRepository`. Omitted/null when `--ai`
+   * wasn't used or produced nothing worth writing.
+   */
+  conventionsMdContent?: string | null;
 }
 
 export interface RunAnalyzeResult extends ApplyResult {
@@ -40,7 +49,7 @@ function assertNotAlreadyInitialized(projectDir: string): void {
  * back, never overwritten (Rule 10). No AI by default, matching `init`.
  */
 export async function runAnalyze(options: RunAnalyzeOptions): Promise<RunAnalyzeResult> {
-  const { projectDir, input, agentId, useAI = false } = options;
+  const { projectDir, input, agentId, useAI = false, conventionsMdContent } = options;
 
   assertNotAlreadyInitialized(projectDir);
 
@@ -64,11 +73,35 @@ export async function runAnalyze(options: RunAnalyzeOptions): Promise<RunAnalyze
   ];
   assertNoDuplicatePaths(files);
 
+  // CONVENTIONS.md is written through the same merge-aware pipeline as
+  // everything else (so a pre-existing, hand-written CONVENTIONS.md is
+  // protected by the exact same Rule 10 guarantee), but deliberately
+  // excluded from `generatedPaths` below — see the comment there.
+  const rawFiles = conventionsMdContent ? [...files, { path: "CONVENTIONS.md", content: conventionsMdContent }] : files;
+
   // Nothing to reconcile as stale on a first-time apply — every file is
   // either brand new or merged with whatever (if anything) already exists.
-  const applyResult = applyGeneratedFiles(projectDir, files, []);
+  const applyResult = applyGeneratedFiles(projectDir, rawFiles, []);
 
-  writeProjectState(projectDir, { blueprint, generatedPaths: files.map((file) => file.path) });
+  // Snapshots the real, pre-existing directory structure being adopted —
+  // the baseline `ai-zoll check` diffs future scans against to report
+  // newly-appeared conventions. Computed against the same projectDir the
+  // files above were just merged into; harmless either way since generated
+  // files (docs/, skills/) never match a DirectoryAnalyzer candidate name.
+  const directorySignals = analyzeDirectory(projectDir).signals.value ?? [];
+
+  writeProjectState(projectDir, {
+    blueprint,
+    // CONVENTIONS.md is deliberately NOT included here: `sync` is
+    // permanently AI-free and can never regenerate AI-derived content, so
+    // tracking it as "generated" would make a future sync (which produces
+    // a files list without CONVENTIONS.md, since it has no insights to
+    // render) treat it as stale and delete it. Leaving it untracked means
+    // it simply becomes an ordinary project file after this one write —
+    // exactly the intended, safe behavior.
+    generatedPaths: files.map((file) => file.path),
+    directorySignals,
+  });
 
   return { projectDir, agentId, ...applyResult };
 }

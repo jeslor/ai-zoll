@@ -105,4 +105,60 @@ describe("runAnalyze", () => {
     await expect(runAnalyze({ projectDir, input: invalidInput, agentId: "claude" })).rejects.toThrow();
     expect(fs.existsSync(path.join(projectDir, "PROJECT.md"))).toBe(false);
   });
+
+  it("snapshots the real, pre-existing directory structure into state.json's directorySignals baseline", async () => {
+    const projectDir = makeTempDir();
+    fs.mkdirSync(path.join(projectDir, "src", "controllers"), { recursive: true });
+    fs.mkdirSync(path.join(projectDir, "src", "services"), { recursive: true });
+    fs.writeFileSync(path.join(projectDir, "src", "controllers", ".gitkeep"), "");
+    fs.writeFileSync(path.join(projectDir, "src", "services", ".gitkeep"), "");
+
+    await runAnalyze({ projectDir, input: fullInput, agentId: "claude" });
+
+    const state = readProjectState(projectDir);
+    expect(state.directorySignals?.sort()).toEqual(["controllers", "services"]);
+  });
+
+  it("writes CONVENTIONS.md when conventionsMdContent is provided, and never tracks it in generatedPaths", async () => {
+    const projectDir = makeTempDir();
+
+    const result = await runAnalyze({
+      projectDir,
+      input: fullInput,
+      agentId: "claude",
+      conventionsMdContent: "# Conventions\n\n## Conventions\n\n- Example\n",
+    });
+
+    expect(result.created).toContain("CONVENTIONS.md");
+    expect(fs.readFileSync(path.join(projectDir, "CONVENTIONS.md"), "utf-8")).toContain("- Example");
+
+    const state = readProjectState(projectDir);
+    expect(state.generatedPaths).not.toContain("CONVENTIONS.md");
+  });
+
+  it("never writes CONVENTIONS.md when conventionsMdContent is omitted (no --ai, or nothing worth writing)", async () => {
+    const projectDir = makeTempDir();
+
+    const result = await runAnalyze({ projectDir, input: fullInput, agentId: "claude" });
+
+    expect(result.created).not.toContain("CONVENTIONS.md");
+    expect(fs.existsSync(path.join(projectDir, "CONVENTIONS.md"))).toBe(false);
+  });
+
+  it("preserves a pre-existing, hand-written CONVENTIONS.md rather than overwriting it (Rule 10)", async () => {
+    const projectDir = makeTempDir();
+    const handWritten = "# Conventions\n\nHand-written before ai-zoll ever ran here.\n";
+    fs.writeFileSync(path.join(projectDir, "CONVENTIONS.md"), handWritten);
+
+    const result = await runAnalyze({
+      projectDir,
+      input: fullInput,
+      agentId: "claude",
+      conventionsMdContent: "# Conventions\n\n## Conventions\n\n- AI-derived\n",
+    });
+
+    expect(fs.readFileSync(path.join(projectDir, "CONVENTIONS.md"), "utf-8")).toBe(handWritten);
+    expect(result.preserved.map((p) => p.path)).toContain("CONVENTIONS.md");
+    expect(result.created).not.toContain("CONVENTIONS.md");
+  });
 });

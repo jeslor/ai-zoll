@@ -150,4 +150,45 @@ describe("analyzeFramework", () => {
     expect(result.frontend.confidence).toBe("unknown");
     expect(result.backend.confidence).toBe("unknown");
   });
+
+  it("detects backend frameworks from non-Node ecosystems", () => {
+    const django = seed({ "requirements.txt": "django==4.2.0\n" });
+    expect(analyzeFramework(django).backend.value).toBe("django");
+
+    const fastapi = seed({ "requirements.txt": "fastapi>=0.100\n" });
+    expect(analyzeFramework(fastapi).backend.value).toBe("fastapi");
+
+    const spring = seed({
+      "pom.xml":
+        "<project><dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>",
+    });
+    expect(analyzeFramework(spring).backend.value).toBe("spring-boot");
+
+    // Spring Boot 4 renamed the starter to "-webmvc" — found dogfooding
+    // against a real Spring Boot 4 app (spring-petclinic) that only had
+    // this newer name, missing it entirely under the old-name-only signal.
+    const springBoot4 = seed({
+      "build.gradle": "dependencies {\n  implementation 'org.springframework.boot:spring-boot-starter-webmvc'\n}",
+    });
+    expect(analyzeFramework(springBoot4).backend.value).toBe("spring-boot");
+
+    const actix = seed({ "Cargo.toml": '[dependencies]\nactix-web = "4"\n' });
+    expect(analyzeFramework(actix).backend.value).toBe("actix-web");
+
+    const gin = seed({
+      "go.mod": "module acme\n\nrequire github.com/gin-gonic/gin v1.9.1\n",
+    });
+    expect(analyzeFramework(gin).backend.value).toBe("gin");
+
+    const rails = seed({ Gemfile: 'gem "rails", "~> 7.0"\n' });
+    expect(analyzeFramework(rails).backend.value).toBe("rails");
+
+    const laravel = seed({
+      "composer.json": JSON.stringify({ require: { "laravel/framework": "^10.0" } }),
+    });
+    expect(analyzeFramework(laravel).backend.value).toBe("laravel");
+
+    const aspnet = seed({ "App.csproj": '<Project Sdk="Microsoft.NET.Sdk.Web"></Project>' });
+    expect(analyzeFramework(aspnet).backend.value).toBe("aspnet");
+  });
 });

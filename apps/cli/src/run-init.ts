@@ -90,9 +90,15 @@ export async function runInit(options: RunInitOptions): Promise<RunInitResult> {
     fs.writeFileSync(fullPath, file.content);
   }
 
+  // A brand-new project has no pre-existing structure to snapshot — the
+  // only things on disk at this point are the files ai-zoll itself just
+  // wrote (docs/, skills/, workflows/), none of which match
+  // DirectoryAnalyzer's architecture-convention candidate names, so an
+  // empty baseline is accurate, not a shortcut.
   writeProjectState(outputDir, {
     blueprint,
     generatedPaths: files.map((file) => file.path),
+    directorySignals: [],
   });
 
   return { outputDir, files };

@@ -109,4 +109,58 @@ datasource db {
     expect(result.framework.frontend.reason).toContain("apps/web: nextjs");
     expect(result.framework.frontend.reason).toContain("apps/marketing: astro");
   });
+
+  it("resolves frontend to the meta-framework when another package only has its base library (found dogfooding against cal.com/SvelteKit's own monorepos)", () => {
+    const dir = seed({
+      "package.json": JSON.stringify({ name: "acme-monorepo", private: true, workspaces: ["apps/*", "packages/*"] }),
+      "apps/web/package.json": JSON.stringify({ dependencies: { next: "^14.2.0" } }),
+      // A CLI/tooling package that only needs the base library directly —
+      // not a conflicting frontend choice, just a smaller dependency footprint.
+      "packages/app-store-cli/package.json": JSON.stringify({ dependencies: { react: "^18.3.0" } }),
+    });
+
+    const result = analyzeRepository(dir);
+
+    expect(result.framework.frontend.value).toBe("nextjs");
+    expect(result.framework.frontend.confidence).toBe("detected");
+    expect(result.framework.frontend.reason).toContain("react");
+  });
+
+  it("still reports unknown when the disagreement is a genuinely different frontend framework family, even with a specializes map in play", () => {
+    const dir = seed({
+      "package.json": JSON.stringify({ name: "acme-monorepo", private: true, workspaces: ["apps/*"] }),
+      "apps/web/package.json": JSON.stringify({ dependencies: { next: "^14.2.0" } }),
+      "apps/marketing/package.json": JSON.stringify({ dependencies: { nuxt: "^3.0.0" } }),
+    });
+
+    const result = analyzeRepository(dir);
+
+    expect(result.framework.frontend.confidence).toBe("unknown");
+  });
+
+  it("combines every analyzer's output for a non-Node repo end-to-end (Python/Django, no package.json at all)", () => {
+    const dir = seed({
+      "requirements.txt": ["django==4.2.0", "psycopg2-binary==2.9.9", "pytest==7.4.0", "pyjwt==2.8.0"].join(
+        "\n",
+      ),
+      ".git/config": '[remote "origin"]\n\turl = git@github.com:acme/django-api.git\n',
+      "domain/.gitkeep": "",
+      "infrastructure/.gitkeep": "",
+      "tests/test_booking.py": "def test_x(): pass",
+    });
+
+    const result = analyzeRepository(dir);
+
+    expect(result.framework.backend.value).toBe("django");
+    expect(result.database.orm.value).toBe("django-orm");
+    expect(result.database.database).toEqual({
+      value: "postgresql",
+      confidence: "likely",
+      reason: expect.any(String),
+    });
+    expect(result.testing.unit.value).toBe(true);
+    expect(result.dependency.authentication.value).toBe("jwt");
+    expect(result.git.projectName.value).toBe("django-api");
+    expect(result.directory.signals.value?.sort()).toEqual(["domain", "infrastructure"]);
+  });
 });

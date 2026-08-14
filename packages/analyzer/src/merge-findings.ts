@@ -15,6 +15,45 @@ function best<T>(findings: AttributedFinding<T>[]): AttributedFinding<T> {
 }
 
 /**
+ * Resolves a disagreement that isn't really a disagreement: one source
+ * found a meta-framework (e.g. "nextjs") and another found exactly the
+ * base framework it always bundles (e.g. "react") — both facts are true
+ * simultaneously, not conflicting ones. Returns null (defer to the normal
+ * "unknown, disagreement" path) unless *every* distinct value present is
+ * explained by a single meta/base pair — two different meta-frameworks
+ * (e.g. "nextjs" and "nuxt"), or a base value the winning meta doesn't
+ * imply, are still real disagreements.
+ */
+function resolveSpecialization<T>(
+  withValue: AttributedFinding<T>[],
+  specializes: Record<string, string>,
+): Finding<T> | null {
+  const distinctValues = [...new Set(withValue.map((a) => String(a.finding.value)))];
+  const metaValues = distinctValues.filter((v) => v in specializes);
+  if (metaValues.length !== 1) {
+    return null;
+  }
+  // biome-ignore lint/style/noNonNullAssertion: metaValues.length === 1 just confirmed above
+  const meta = metaValues[0]!;
+  // biome-ignore lint/style/noNonNullAssertion: meta passed the `v in specializes` filter above
+  const impliedBase = specializes[meta]!;
+  const unexplained = distinctValues.filter((v) => v !== meta && v !== impliedBase);
+  if (unexplained.length > 0) {
+    return null;
+  }
+
+  const metaSources = withValue.filter((a) => String(a.finding.value) === meta);
+  const baseSources = withValue.filter((a) => String(a.finding.value) === impliedBase);
+  const winner = best(metaSources);
+  const corroboration = baseSources.map((a) => a.source).join(", ");
+  return {
+    value: winner.finding.value,
+    confidence: winner.finding.confidence,
+    reason: `${winner.finding.reason} (implies "${impliedBase}"; corroborated in ${corroboration}, which uses the base framework directly)`,
+  };
+}
+
+/**
  * Categorical single-value fields (framework.frontend/backend,
  * database.database/orm, dependency.authentication/authorization) —
  * "agree or report ambiguity" semantics. Every function in this module
@@ -31,9 +70,23 @@ function best<T>(findings: AttributedFinding<T>[]): AttributedFinding<T> {
  * enumerating every contributing source's value in the reason text — that
  * text is the only place this information reaches a user before analyze.ts
  * falls back to a blind prompt, so it's load-bearing, not cosmetic.
+ *
+ * `specializes` is optional and purely additive (omitted by every call site
+ * except `framework.frontend` — see `analyze-repository.ts`): a map from a
+ * more-specific value to the less-specific base value it unconditionally
+ * implies (`{ nextjs: "react" }`). Found necessary by dogfooding against
+ * real monorepos (cal.com, SvelteKit's own repo) where some packages
+ * depend on a meta-framework and others only on its base library — without
+ * this, that's misreported as a disagreement instead of corroboration.
+ * Deliberately narrow: only a true, unconditional "always implies"
+ * relationship belongs here, never a common-but-optional pairing.
  */
-export function mergeCategorical<T>(attributed: AttributedFinding<T>[]): Finding<T> {
+export function mergeCategorical<T>(
+  attributed: AttributedFinding<T>[],
+  specializes?: Record<string, string>,
+): Finding<T> {
   if (attributed.length === 1) {
+    // biome-ignore lint/style/noNonNullAssertion: length === 1 just checked
     return attributed[0]!.finding;
   }
 
@@ -48,6 +101,12 @@ export function mergeCategorical<T>(attributed: AttributedFinding<T>[]): Finding
 
   const uniqueValues = new Set(withValue.map((a) => JSON.stringify(a.finding.value)));
   if (uniqueValues.size > 1) {
+    if (specializes) {
+      const resolved = resolveSpecialization(withValue, specializes);
+      if (resolved) {
+        return resolved;
+      }
+    }
     const detail = withValue.map((a) => `${a.source}: ${String(a.finding.value)}`).join("; ");
     return {
       value: null,
@@ -57,6 +116,7 @@ export function mergeCategorical<T>(attributed: AttributedFinding<T>[]): Finding
   }
 
   if (withValue.length === 1) {
+    // biome-ignore lint/style/noNonNullAssertion: length === 1 just checked
     return withValue[0]!.finding;
   }
 
@@ -80,6 +140,7 @@ export function mergeCategorical<T>(attributed: AttributedFinding<T>[]): Finding
  */
 export function mergeBoolean(attributed: AttributedFinding<boolean>[]): Finding<boolean> {
   if (attributed.length === 1) {
+    // biome-ignore lint/style/noNonNullAssertion: length === 1 just checked
     return attributed[0]!.finding;
   }
 
@@ -116,6 +177,7 @@ export function mergeBoolean(attributed: AttributedFinding<boolean>[]): Finding<
  */
 export function mergeArray(attributed: AttributedFinding<string[]>[]): Finding<string[]> {
   if (attributed.length === 1) {
+    // biome-ignore lint/style/noNonNullAssertion: length === 1 just checked
     return attributed[0]!.finding;
   }
 

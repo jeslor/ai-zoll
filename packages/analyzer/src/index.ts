@@ -4,7 +4,7 @@ export { isExcludedPath } from "./exclusion";
 export { analyzePackage } from "./package-analyzer";
 export type { PackageAnalyzerResult } from "./package-analyzer";
 
-export { analyzeFramework } from "./framework-analyzer";
+export { analyzeFramework, FRONTEND_SPECIALIZES } from "./framework-analyzer";
 export type { FrameworkAnalyzerResult } from "./framework-analyzer";
 
 export { analyzeDatabase } from "./database-analyzer";
@@ -21,6 +21,9 @@ export type { DependencyAnalyzerResult } from "./dependency-analyzer";
 
 export { analyzeDirectory } from "./directory-analyzer";
 export type { DirectoryAnalyzerResult } from "./directory-analyzer";
+
+export { analyzeImportBoundaries } from "./import-boundary-analyzer";
+export type { ImportBoundaryViolation } from "./import-boundary-analyzer";
 
 export { analyzeRepository } from "./analyze-repository";
 export type { RepositoryAnalysis } from "./analyze-repository";

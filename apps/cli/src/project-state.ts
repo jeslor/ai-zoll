@@ -13,6 +13,18 @@ export interface ProjectState {
    * agent switch involved. See run-sync.ts.
    */
   generatedPaths: string[];
+  /**
+   * Directory-convention names (`DirectoryAnalyzer.signals`) found the last
+   * time `init`/`analyze`/`sync` ran — the baseline `run-check.ts` diffs a
+   * fresh scan against to report newly-appeared conventions (spec §27's
+   * "undocumented directories" example). Optional and undefined for
+   * `state.json` files written before this existed: that must read as "no
+   * baseline recorded yet" and be skipped, never as "found nothing then",
+   * which would misreport every current signal as newly-appeared. Writers
+   * (see `writeProjectState`'s stricter parameter type) always populate a
+   * real array, even an empty one, going forward.
+   */
+  directorySignals?: string[];
 }
 
 const STATE_DIR = ".ai-zoll";
@@ -22,6 +34,7 @@ const STATE_FILE = "state.json";
 const ProjectStateFileSchema = z.object({
   blueprint: z.unknown(),
   generatedPaths: z.array(z.string()),
+  directorySignals: z.array(z.string()).optional(),
 });
 
 function statePath(projectDir: string): string {
@@ -80,6 +93,7 @@ export function readProjectState(projectDir: string): ProjectState {
   return {
     blueprint: blueprintResult.data,
     generatedPaths: shape.data.generatedPaths,
+    directorySignals: shape.data.directorySignals,
   };
 }
 
@@ -87,9 +101,15 @@ export function readProjectState(projectDir: string): ProjectState {
  * Pretty-printed, trailing newline — meant to be committed to git and
  * human-diffable, like package.json. Written to a temp file then renamed
  * (atomic on POSIX filesystems) so a crash mid-write can't leave a
- * truncated state.json behind.
+ * truncated state.json behind. `directorySignals` is required here (unlike
+ * on `ProjectState` itself) — every write from this point on establishes a
+ * real baseline, even an empty one; only files written before this feature
+ * existed are allowed to have it missing.
  */
-export function writeProjectState(projectDir: string, state: ProjectState): void {
+export function writeProjectState(
+  projectDir: string,
+  state: ProjectState & { directorySignals: string[] },
+): void {
   const dir = path.join(projectDir, STATE_DIR);
   fs.mkdirSync(dir, { recursive: true });
 

@@ -90,6 +90,72 @@ describe("mergeCategorical", () => {
   });
 });
 
+describe("mergeCategorical with a specializes map", () => {
+  const FRONTEND_SPECIALIZES = { nextjs: "react", nuxt: "vue" };
+
+  it("resolves a meta-framework + its own base library to the meta-framework, not unknown", () => {
+    const result = mergeCategorical<string>(
+      [
+        { source: "apps/web", finding: detected("nextjs") },
+        { source: "packages/app-store-cli", finding: detected("react") },
+      ],
+      FRONTEND_SPECIALIZES,
+    );
+
+    expect(result.value).toBe("nextjs");
+    expect(result.confidence).toBe("detected");
+    expect(result.reason).toContain("react");
+    expect(result.reason).toContain("packages/app-store-cli");
+  });
+
+  it("still reports unknown when the disagreement isn't explained by the specialization map (a genuinely different framework family)", () => {
+    const result = mergeCategorical<string>(
+      [
+        { source: "apps/web", finding: detected("nextjs") },
+        { source: "examples/nuxt", finding: detected("nuxt") },
+      ],
+      FRONTEND_SPECIALIZES,
+    );
+
+    expect(result.confidence).toBe("unknown");
+    expect(result.value).toBeNull();
+  });
+
+  it("still reports unknown when a meta-framework appears alongside an unrelated base value it doesn't imply", () => {
+    const result = mergeCategorical<string>(
+      [
+        { source: "apps/web", finding: detected("nextjs") },
+        { source: "packages/vue-widget", finding: detected("vue") },
+      ],
+      FRONTEND_SPECIALIZES,
+    );
+
+    expect(result.confidence).toBe("unknown");
+    expect(result.value).toBeNull();
+  });
+
+  it("is a no-op when every source already agrees (nothing to resolve)", () => {
+    const result = mergeCategorical<string>(
+      [
+        { source: "apps/web", finding: detected("nextjs") },
+        { source: "apps/docs", finding: detected("nextjs") },
+      ],
+      FRONTEND_SPECIALIZES,
+    );
+
+    expect(result.value).toBe("nextjs");
+  });
+
+  it("without a specializes argument, behaves exactly as before (real disagreement, unknown)", () => {
+    const result = mergeCategorical<string>([
+      { source: "apps/web", finding: detected("nextjs") },
+      { source: "packages/app-store-cli", finding: detected("react") },
+    ]);
+
+    expect(result.confidence).toBe("unknown");
+  });
+});
+
 describe("mergeBoolean", () => {
   it("passes through a single source's finding completely unchanged", () => {
     const finding = detected(true, "found vitest");

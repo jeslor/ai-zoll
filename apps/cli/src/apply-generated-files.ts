@@ -23,6 +23,29 @@ function lstatOrNull(fullPath: string): fs.Stats | null {
   }
 }
 
+/**
+ * True if any directory between `projectDir` and `fullPath`'s parent is
+ * itself a symlink. `lstatSync(fullPath)` only reports on the leaf
+ * component — a symlinked *ancestor* directory (e.g. `.cursor/rules` ->
+ * `../agents/rules`, a real pattern found dogfooding against a real
+ * monorepo that shares rule content across agent tools) resolves
+ * transparently, so a leaf-only check sees an ordinary, nonexistent path
+ * and happily creates/deletes through the symlink into whatever it
+ * actually points at — which may be real, unrelated, git-tracked project
+ * content this tool has no business touching. Checked before every write
+ * and every stale-file deletion.
+ */
+function hasSymlinkedAncestor(projectDir: string, fullPath: string): boolean {
+  let dir = path.dirname(fullPath);
+  while (dir !== projectDir && dir.length > projectDir.length) {
+    if (lstatOrNull(dir)?.isSymbolicLink()) {
+      return true;
+    }
+    dir = path.dirname(dir);
+  }
+  return false;
+}
+
 /** Removes now-empty directories left behind by a deletion, up to (not including) projectDir. */
 function pruneEmptyDirs(dir: string, projectDir: string): void {
   let current = dir;
@@ -66,6 +89,13 @@ function reconcileOrphans(projectDir: string, stalePaths: string[], result: Appl
       result.preserved.push({ path: stalePath, reason: "not a regular file, skipped for safety" });
       continue;
     }
+    if (hasSymlinkedAncestor(projectDir, fullPath)) {
+      result.preserved.push({
+        path: stalePath,
+        reason: "a parent directory in this path is a symlink, skipped for safety",
+      });
+      continue;
+    }
 
     const existingContent = fs.readFileSync(fullPath, "utf-8");
     const extracted = extractCustomZone(existingContent);
@@ -98,6 +128,13 @@ function writeGeneratedFiles(projectDir: string, files: GeneratedFile[], result:
     }
     if (lstat?.isDirectory()) {
       result.preserved.push({ path: file.path, reason: "a directory already exists at this path" });
+      continue;
+    }
+    if (hasSymlinkedAncestor(projectDir, fullPath)) {
+      result.preserved.push({
+        path: file.path,
+        reason: "a parent directory in this path is a symlink, skipped for safety",
+      });
       continue;
     }
 

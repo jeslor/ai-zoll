@@ -21,6 +21,12 @@ function seed(deps: Record<string, string>): string {
   return dir;
 }
 
+function seedFiles(files: Record<string, string>): string {
+  const dir = makeFixtureRepo(files);
+  tempDirs.push(dir);
+  return dir;
+}
+
 describe("analyzeDependencies — authentication", () => {
   it("detects jwt from jsonwebtoken", () => {
     expect(analyzeDependencies(seed({ jsonwebtoken: "^9.0.0" })).authentication).toEqual({
@@ -69,5 +75,30 @@ describe("analyzeDependencies — authorization", () => {
 
   it("returns unknown when nothing recognized is present", () => {
     expect(analyzeDependencies(seed({})).authorization.confidence).toBe("unknown");
+  });
+});
+
+describe("analyzeDependencies — multi-language authentication/authorization", () => {
+  it("detects jwt libraries from non-Node ecosystems", () => {
+    const python = seedFiles({ "requirements.txt": "pyjwt==2.8.0\n" });
+    expect(analyzeDependencies(python).authentication.value).toBe("jwt");
+
+    const go = seedFiles({ "go.mod": "module acme\n\nrequire github.com/golang-jwt/jwt/v5 v5.2.0\n" });
+    expect(analyzeDependencies(go).authentication.value).toBe("jwt");
+  });
+
+  it("distinguishes Laravel's Passport (OAuth2 server) from Node's Passport.js — not the same 'passport' value", () => {
+    const laravel = seedFiles({
+      "composer.json": JSON.stringify({ require: { "laravel/passport": "^12.0" } }),
+    });
+    expect(analyzeDependencies(laravel).authentication.value).toBe("laravel-passport");
+  });
+
+  it("detects casbin (a real package under that exact name in both Python and Go)", () => {
+    const python = seedFiles({ "requirements.txt": "casbin==1.36.0\n" });
+    expect(analyzeDependencies(python).authorization.value).toBe("casbin");
+
+    const go = seedFiles({ "go.mod": "module acme\n\nrequire github.com/casbin/casbin/v2 v2.77.0\n" });
+    expect(analyzeDependencies(go).authorization.value).toBe("casbin");
   });
 });

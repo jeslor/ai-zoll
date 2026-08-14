@@ -127,4 +127,53 @@ datasource db {
     expect(result.database.confidence).toBe("unknown");
     expect(result.orm.confidence).toBe("unknown");
   });
+
+  it("detects SQLAlchemy (Python) as ORM and a raw driver as the likely database", () => {
+    const dir = seed({ "requirements.txt": "sqlalchemy==2.0.0\npsycopg2-binary==2.9.9\n" });
+
+    const result = analyzeDatabase(dir);
+
+    expect(result.orm.value).toBe("sqlalchemy");
+    expect(result.database).toEqual({ value: "postgresql", confidence: "likely", reason: expect.any(String) });
+  });
+
+  it("detects SQLModel and psycopg3 (v3, a separate package from psycopg2) — found dogfooding against a real FastAPI template", () => {
+    const dir = seed({
+      "requirements.txt": ["sqlmodel==0.0.39", "psycopg[binary]==3.3.4"].join("\n"),
+    });
+
+    const result = analyzeDatabase(dir);
+
+    expect(result.orm.value).toBe("sqlmodel");
+    expect(result.database.value).toBe("postgresql");
+  });
+
+  it("detects a raw driver even with no ORM present at all (idiomatic Go/Rust shape)", () => {
+    const dir = seed({ "go.mod": "module acme\n\nrequire github.com/lib/pq v1.10.9\n" });
+
+    const result = analyzeDatabase(dir);
+
+    expect(result.orm.confidence).toBe("unknown");
+    expect(result.database.value).toBe("postgresql");
+  });
+
+  it("detects Laravel's Eloquent (PHP) as an ORM implied by the framework dependency itself", () => {
+    const dir = seed({
+      "composer.json": JSON.stringify({ require: { "laravel/framework": "^10.0" } }),
+    });
+
+    expect(analyzeDatabase(dir).orm.value).toBe("eloquent");
+  });
+
+  it("detects EF Core (.NET) and its database provider together", () => {
+    const dir = seed({
+      "App.csproj":
+        '<Project Sdk="Microsoft.NET.Sdk.Web"><ItemGroup><PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" /></ItemGroup></Project>',
+    });
+
+    const result = analyzeDatabase(dir);
+
+    expect(result.orm.value).toBe("efcore");
+    expect(result.database.value).toBe("postgresql");
+  });
 });

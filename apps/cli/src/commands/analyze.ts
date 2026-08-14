@@ -7,6 +7,7 @@ import { analyzeRepository } from "@ai-zoll/analyzer";
 import { runAnalyze } from "../run-analyze";
 import { selectAIProvider } from "../select-ai-provider";
 import { printApplyResult } from "../print-apply-result";
+import { generateConventionsMd } from "../generate-conventions-md";
 import type { TestingTypes } from "./prompts";
 import {
   promptAgent,
@@ -115,8 +116,15 @@ const INSIGHTS_SECTIONS: Array<[label: string, key: keyof RepositoryInsights]> =
  * required". A missing-API-key configuration error is deliberately NOT
  * caught here — see the eager `selectAIProvider` call in
  * `runAnalyzeCommand`, which fails fast before any of this report prints.
+ *
+ * Returns the fetched insights (or null on failure) so the caller can reuse
+ * them for CONVENTIONS.md (`generate-conventions-md.ts`) without a second,
+ * redundant AI call.
  */
-async function printAIInsights(provider: AIProvider, analysis: RepositoryAnalysis): Promise<void> {
+async function fetchAndPrintAIInsights(
+  provider: AIProvider,
+  analysis: RepositoryAnalysis,
+): Promise<RepositoryInsights | null> {
   console.log("AI-ASSISTED INSIGHTS\n");
 
   let insights: RepositoryInsights;
@@ -125,14 +133,14 @@ async function printAIInsights(provider: AIProvider, analysis: RepositoryAnalysi
   } catch (error) {
     console.log(`  Unavailable: ${error instanceof Error ? error.message : String(error)}`);
     console.log();
-    return;
+    return null;
   }
 
   const nonEmptySections = INSIGHTS_SECTIONS.filter(([, key]) => insights[key].length > 0);
   if (nonEmptySections.length === 0) {
     console.log("  No additional insights identified.");
     console.log();
-    return;
+    return insights;
   }
 
   for (const [label, key] of nonEmptySections) {
@@ -142,6 +150,7 @@ async function printAIInsights(provider: AIProvider, analysis: RepositoryAnalysi
     }
   }
   console.log();
+  return insights;
 }
 
 /**
@@ -177,9 +186,8 @@ export async function runAnalyzeCommand(options: RunAnalyzeCommandOptions): Prom
   printFinding("Authorization", analysis.dependency.authorization);
   console.log();
 
-  if (aiProvider) {
-    await printAIInsights(aiProvider, analysis);
-  }
+  const insights = aiProvider ? await fetchAndPrintAIInsights(aiProvider, analysis) : null;
+  const conventionsMdContent = insights ? generateConventionsMd(insights) : null;
 
   // project.name: prefer PackageAnalyzer's finding, fall back to GitAnalyzer's.
   const nameFinding: Finding<string> =
@@ -235,7 +243,13 @@ export async function runAnalyzeCommand(options: RunAnalyzeCommandOptions): Prom
     agent: { primary: agentId },
   };
 
-  const result = await runAnalyze({ projectDir, input, agentId, useAI: options.useAI });
+  const result = await runAnalyze({
+    projectDir,
+    input,
+    agentId,
+    useAI: options.useAI,
+    conventionsMdContent,
+  });
 
   console.log(`\nAdopted "${projectDir}" for agent "${result.agentId}":`);
   printApplyResult(result);

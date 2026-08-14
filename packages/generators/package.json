@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "lint": "echo \"[generators] lint tooling pending (Phase 0)\"",
+    "lint": "biome check src",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

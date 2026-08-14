@@ -1,7 +1,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./finding";
-import { readDependencyNames, readPackageJson } from "./read-package-json";
+import { readPackageJson } from "./read-package-json";
+import { readAllDependencyNames } from "./read-dependency-names";
 import { isExcludedPath } from "./exclusion";
 
 export interface TestAnalyzerResult {
@@ -10,17 +11,62 @@ export interface TestAnalyzerResult {
   e2e: Finding<boolean>;
 }
 
-const UNIT_TEST_DEPS = ["vitest", "jest", "mocha", "ava"];
-const E2E_TEST_DEPS = ["playwright", "@playwright/test", "cypress"];
+/**
+ * One block per ecosystem. Rust and Go are deliberately absent here —
+ * `cargo test`/`go test` are built into the toolchain, so there's no
+ * separate "test runner dependency" signal to check the way Node/Python/
+ * Java/Ruby/PHP/.NET all have one; those two ecosystems rely entirely on
+ * TEST_FILE_PATTERNS below (still a real, valid `likely` signal).
+ */
+const UNIT_TEST_DEPS = [
+  "vitest",
+  "jest",
+  "mocha",
+  "ava",
+  "pytest",
+  "junit",
+  "junit-jupiter",
+  "junit-jupiter-api",
+  "rspec",
+  "phpunit/phpunit",
+  "xunit",
+  "nunit",
+  "MSTest.TestFramework",
+];
+const E2E_TEST_DEPS = ["playwright", "@playwright/test", "cypress", "Microsoft.Playwright"];
 
 const TEST_DIR_NAMES = new Set(["test", "tests", "__tests__"]);
-// Accepts both the dot-separated convention (name.spec.ts, name.test.ts) and
-// NestJS's own official hyphenated e2e convention (name.e2e-spec.ts) — found
-// via dogfooding against a real NestJS backend, where this file-pattern gap
-// was masked only because a matching "test:e2e" script also happened to
-// exist; a repo relying on file presence alone would have been missed.
-const TEST_FILE_PATTERN = /[.-](test|spec)\.[^.]+$/;
+/**
+ * A list, not one giant regex — this codebase's languages don't share a
+ * single naming convention the way Node's own dot/hyphen-separated style
+ * does. Each entry documents which ecosystem it covers, so adding another
+ * later means reasoning about one line, not re-deriving the whole pattern.
+ */
+const TEST_FILE_PATTERNS: RegExp[] = [
+  // Node/JS: name.test.ts, name.spec.ts — and NestJS's own official
+  // hyphenated e2e convention (name.e2e-spec.ts), found via dogfooding
+  // against a real NestJS backend, where this gap was masked only because
+  // a matching "test:e2e" script also happened to exist; a repo relying on
+  // file presence alone would have been missed.
+  /[.-](test|spec)\.[^.]+$/,
+  // Go: name_test.go. Python: name_test.py (a real, if less common,
+  // alternative to the test_name.py prefix style below).
+  /_test\.[^.]+$/,
+  // Python: test_name.py (the more common of Python's two conventions).
+  /^test_.+\.[^.]+$/,
+  // Java/Kotlin/PHP: NameTest.java, NameTest.kt, NameTest.php.
+  /Test\.(java|kt|php)$/,
+  // .NET: NameTests.cs.
+  /Tests\.cs$/,
+  // Ruby: name_spec.rb (RSpec's convention; name_test.rb is already
+  // covered by the _test\.[^.]+$ pattern above).
+  /_spec\.rb$/,
+];
 const MAX_WALK_DEPTH = 4;
+
+function matchesAnyTestFilePattern(fileName: string): boolean {
+  return TEST_FILE_PATTERNS.some((pattern) => pattern.test(fileName));
+}
 
 /** The classic npm-init default — present, but not evidence tests actually exist. */
 function isPlaceholderTestScript(script: string): boolean {
@@ -69,7 +115,9 @@ function hasTestFilesOrDirs(repoPath: string): boolean {
         if (walk(path.join(dir, entry.name), entryRelPath, depth + 1)) {
           return true;
         }
-      } else if (entry.isFile() && TEST_FILE_PATTERN.test(entry.name)) {
+      } else if (entry.isFile() && matchesAnyTestFilePattern(entry.name)) {
+        return true;
+      } else if (entry.isFile() && entry.name.endsWith(".rs") && hasRustInlineTestAttribute(path.join(dir, entry.name))) {
         return true;
       }
     }
@@ -77,6 +125,28 @@ function hasTestFilesOrDirs(repoPath: string): boolean {
   }
 
   return walk(repoPath, "", 0);
+}
+
+/**
+ * Rust's dominant testing convention is an inline `#[test]` function or a
+ * `#[cfg(test)] mod tests { ... }` block within an ordinary source file —
+ * unlike every other ecosystem this walk otherwise handles, there's no
+ * separate file-naming convention to look for at all. Found dogfooding
+ * against a real, unmodified Rust web service whose only tests were
+ * written this way — the file-name-only walk reported a confident (and
+ * wrong) "no tests" for it. A small, targeted content read, not a general
+ * "scan every file's contents" policy: only `.rs` files pay this cost, and
+ * only within the same bounded/exclusion-aware walk every other check here
+ * already uses.
+ */
+function hasRustInlineTestAttribute(filePath: string): boolean {
+  let content: string;
+  try {
+    content = fs.readFileSync(filePath, "utf-8");
+  } catch {
+    return false;
+  }
+  return content.includes("#[test]") || content.includes("#[cfg(test)]");
 }
 
 function findUnit(
@@ -144,7 +214,7 @@ function findE2e(dependencyNames: Set<string>, pkg: Record<string, unknown> | nu
  */
 export function analyzeTests(repoPath: string): TestAnalyzerResult {
   const pkg = readPackageJson(repoPath);
-  const dependencyNames = readDependencyNames(repoPath);
+  const dependencyNames = readAllDependencyNames(repoPath);
   const filesFound = hasTestFilesOrDirs(repoPath);
 
   const unit = findUnit(dependencyNames, pkg, filesFound);

@@ -72,7 +72,7 @@ describe("extractCustomZone", () => {
   });
 
   it("extracts everything after the end marker when well-formed", () => {
-    const existing = wrapManaged("generated body") + "custom notes here";
+    const existing = `${wrapManaged("generated body")}custom notes here`;
 
     const result = extractCustomZone(existing);
 
@@ -88,7 +88,7 @@ describe("extractCustomZone", () => {
     const result = extractCustomZone(existing);
 
     expect(result.customZone).toBe(
-      "some notes, including an example:\n\n" + wrapManaged("copy-pasted example block"),
+      `some notes, including an example:\n\n${wrapManaged("copy-pasted example block")}`,
     );
   });
 
@@ -109,28 +109,28 @@ describe("mergeManagedContent", () => {
 
     expect(result.status).toBe("created");
     expect(result.content).toBe(
-      wrapManaged("fresh body") + CUSTOM_ZONE_HINT + "\n",
+      `${wrapManaged("fresh body") + CUSTOM_ZONE_HINT}\n`,
     );
   });
 
   it("regenerates the managed block and preserves a non-empty custom zone verbatim", () => {
-    const existing = wrapManaged("old body") + `${CUSTOM_ZONE_HINT}\n\n## Notes\nreal stuff`;
+    const existing = `${wrapManaged("old body")}${CUSTOM_ZONE_HINT}\n\n## Notes\nreal stuff`;
 
     const result = mergeManagedContent(existing, "new body");
 
     expect(result.status).toBe("regenerated");
     expect(result.content).toBe(
-      wrapManaged("new body") + `${CUSTOM_ZONE_HINT}\n\n## Notes\nreal stuff`,
+      `${wrapManaged("new body")}${CUSTOM_ZONE_HINT}\n\n## Notes\nreal stuff`,
     );
   });
 
   it("regenerates cleanly when the custom zone only ever had the hint line", () => {
-    const existing = wrapManaged("old body") + `${CUSTOM_ZONE_HINT}\n`;
+    const existing = `${wrapManaged("old body")}${CUSTOM_ZONE_HINT}\n`;
 
     const result = mergeManagedContent(existing, "new body");
 
     expect(result.status).toBe("regenerated");
-    expect(result.content).toBe(wrapManaged("new body") + `${CUSTOM_ZONE_HINT}\n`);
+    expect(result.content).toBe(`${wrapManaged("new body")}${CUSTOM_ZONE_HINT}\n`);
   });
 
   it("leaves unrecognized content completely untouched", () => {
@@ -153,7 +153,7 @@ describe("mergeManagedContent", () => {
   });
 
   it("is deterministic: the same inputs always produce the same output", () => {
-    const existing = wrapManaged("old body") + "custom stuff";
+    const existing = `${wrapManaged("old body")}custom stuff`;
 
     const first = mergeManagedContent(existing, "new body");
     const second = mergeManagedContent(existing, "new body");

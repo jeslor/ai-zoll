@@ -297,8 +297,8 @@ with Claude Code), then Cursor, then Codex. Do not implement all three at once.
       `.github/copilot-instructions.md` and `.github/instructions/
       testing.instructions.md` output.
 
-- [x] `generateRules` for all four adapters — researched each agent's actual "rules"
-      concept rather than guessing, and all four return `[]`, each for a different,
+- [x] `generateRules` for all six adapters — researched each agent's actual "rules"
+      concept rather than guessing, and all six return `[]`, each for a different,
       sourced reason: **Claude** has a real `.claude/rules/` mechanism (glob-scoped
       `.md`, added early 2026) but nothing in the current Blueprint is genuinely
       pattern-scoped convention data — the only candidate content is already
@@ -311,28 +311,47 @@ with Claude Code), then Cursor, then Codex. Do not implement all three at once.
       ([source](https://www.codegateway.dev/en/blog/openai-codex-cli-complete-guide-2026)).
       **Copilot**'s path-specific `.instructions.md` files are already its full
       "rules" mechanism, fully used by `generateSkills` — same reasoning as Cursor.
-- [x] `validate` for all four adapters — shared `validateSkillCoverage`
+      **Cline**'s `.clinerules/` (used by both `generateInstructions` and
+      `generateSkills`) is the same story again. **Zed** has no separate rules
+      concept, matching Codex's reasoning.
+- [x] `validate` for all six adapters — five of six share `validateSkillCoverage`
       (`packages/agents/src/validate-skill-coverage.ts`), checking whether every
       skill a Blueprint triggers (via `packages/generators`' `generateSkills`) has a
       frontmatter entry in *this* adapter's map — i.e., whether `generateSkills`
       would succeed without throwing, exposed as a non-throwing predicate. The check
       itself is agent-agnostic (just "is this key present"), so it's shared across
-      all four despite each adapter's map carrying different extra rendering fields
-      (e.g. Cursor's `globs`, Copilot's `applyTo`). Proven to actually catch drift:
+      Claude/Cursor/Codex/Copilot/Cline despite each adapter's map carrying different
+      extra rendering fields (e.g. Cursor's `globs`, Copilot's `applyTo`) or, for
+      Cline, no extra fields at all (plain markdown, no frontmatter — so its "map" is
+      just a membership set, `CLINE_SKILL_IDS`). Proven to actually catch drift:
       calling it with an empty frontmatter map against a real Blueprint correctly
-      reports `valid: false` with a specific issue.
-- [x] **Future adapter candidates researched and documented, not built** — spec §21
-      requires the adapter pattern to scale to agents beyond the initial four
-      without touching the Blueprint or generator core; see
-      `docs/decisions/0003-agent-adapter-pattern.md`'s "Future adapter candidates"
-      section for the full 2026 landscape survey (Cline, Zed, and why several
-      once-obvious candidates — Gemini CLI, Amazon Q, Windsurf — are no longer
-      live targets). Deliberately scoped down to research + documentation only
-      this session, not implementation (Rule 1) — each real candidate adapter is
-      its own future task.
+      reports `valid: false` with a specific issue. **Zed** is the one genuine
+      exception — its `generateSkills` always returns `[]` (see below), so
+      `validateSkillCoverage`'s premise doesn't apply; its `validate` is a bespoke,
+      always-`{valid: true}` implementation, a real structural difference documented
+      inline, not an oversight.
+- [x] **Cline and Zed adapters built** — the two "Future adapter candidates" from
+      `docs/decisions/0003-agent-adapter-pattern.md`'s prior research, now
+      implemented (see that doc for the confirmed real conventions). `ClineAdapter`:
+      `.clinerules/project.md` (instructions) + `.clinerules/<id>.md` (skills, no
+      frontmatter) — deliberately uses the directory form of `.clinerules`
+      consistently rather than mixing it with the single-file form Cline also
+      supports, so instructions and skills can coexist without fighting over the
+      same path. `ZedAdapter`: a single `.rules` file; `generateSkills` always
+      returns `[]` since Zed has no separate skill/contextual-rules mechanism at
+      all — a real, structural difference from every other adapter, not a
+      shortcut. `packages/blueprint`'s `AgentIdSchema` enum extended to include
+      both (`apps/cli`'s `promptAgent` needed zero changes, since it already
+      derives its choices from `SUPPORTED_AGENT_IDS`). 18 new tests (102 total in
+      `packages/agents`). Verified for real: built the CLI, ran `init` for both
+      agents against a scratch directory, and confirmed the actual on-disk
+      `.clinerules/project.md`, `.clinerules/testing.md`, and `.rules` output —
+      including confirming Zed correctly produces *no* agent-specific skill file
+      while still getting the canonical `skills/` directory every agent gets.
 
-All four adapters (`ClaudeAdapter`/`CursorAdapter`/`CodexAdapter`/`CopilotAdapter`)
-now implement the complete spec §21 `AgentAdapter` interface.
+All six adapters (`ClaudeAdapter`/`CursorAdapter`/`CodexAdapter`/`CopilotAdapter`/
+`ClineAdapter`/`ZedAdapter`) now implement the complete spec §21 `AgentAdapter`
+interface.
 
 ## Phase 4 — AI Blueprint Generation — **done**
 
@@ -455,13 +474,32 @@ dashboard-created blueprint). CLI must be usable with zero dashboard involvement
       survived with the note intact, `.claude/` was removed, `.cursor/rules/*`
       was created, `AGENTS.md` was untouched, and `state.json` reflected the
       new agent — plus a same-agent `sync` and an unsupported-agent error path.
+- [x] Fixed a real non-destructiveness bug in `apply-generated-files.ts`, found during
+      Phase 7's fourth dogfooding pass (see there for the full context): cal.com's
+      real repo has `.cursor/rules` and `.claude/skills` as pre-existing symlinks into
+      a real, git-tracked `agents/` directory it maintains itself (sharing rule
+      content across agent tools). The writer only checked whether the *leaf* file
+      path was a symlink (`lstatSync(fullPath).isSymbolicLink()`) — an intermediate
+      *directory* being a symlink resolves transparently at the OS level, so
+      `.cursor/rules/project.mdc` silently wrote through the symlink into cal.com's
+      real `agents/rules/` directory, and a stale path reconciliation during a
+      same-run agent switch briefly did the same for a delete. Fixed with a new
+      `hasSymlinkedAncestor` check (any directory between `projectDir` and a file's
+      parent), applied to both the write and stale-deletion paths — treated exactly
+      like the existing leaf-symlink case: preserved, reported, never touched. 2 new
+      tests reproducing the exact scenario (a symlinked ancestor pointing to a real
+      directory with real content, for both the write and delete paths); all 58
+      pre-existing `apps/cli` tests passed unchanged. Verified for real: re-cloned
+      cal.com fresh, rebuilt, re-ran the full `analyze` → `sync cursor` pipeline, and
+      confirmed cal.com's real `agents/rules/`/`agents/skills/` directories were no
+      longer polluted (previously confirmed polluted with the pre-fix build).
 - ~~`init <project-id>` (downloads a dashboard-created blueprint)~~ — **out of
       scope (CLI-only pivot).** Presupposed `apps/web`, which no longer exists.
 - [x] `analyze` — shipped, see Phase 7.
-- [ ] `login` — the only genuinely open item from this phase's original list, and
-      arguably moot now: it existed to support `init <project-id>` and dashboard
-      auth, both out of scope. Leave unstarted until a real CLI-only use case for
-      authentication emerges (none identified yet).
+- ~~`login`~~ — **out of scope (CLI-only pivot).** Existed only to support
+      `init <project-id>` and dashboard auth, both removed above; there is no
+      remaining CLI-only use case for authentication. Not tracked as a pending
+      item — this is a fully local, account-free tool by design.
 
 ## Phase 6 — Dashboard — **out of scope (CLI-only pivot)**
 
@@ -471,7 +509,7 @@ point (Next.js, App Router) but was removed along with `apps/api` when the produ
 pivoted to CLI-only — see the note at the top of this document. Not "not started
 yet," genuinely not planned under the current direction.
 
-## Phase 7 — Existing Project Analysis — **done, including the AI-assisted layer**
+## Phase 7 — Existing Project Analysis — **done, including the AI-assisted layer and multi-language support**
 
 `npx ai-zoll analyze`. Deterministic analyzers first (see
 `packages/analyzer`), then AI interpretation on top (opt-in via the same `--ai` flag
@@ -645,6 +683,40 @@ down.
       confirmed the repo's real hand-written `README.md` and real application source
       stayed byte-for-byte untouched, and confirmed a subsequent `sync cursor` worked
       on the adopted project.
+- [x] Fourth dogfooding pass, against 10 real, diverse open source repos at once
+      (express, fastify, nestjs/nest, trpc, astro, sveltejs/kit, remix, cal.com,
+      directus, medusajs/medusa — shallow-cloned fresh, not fixtures) — the broadest
+      real-world sweep yet, and found two more real gaps, one of each severity this
+      package has now seen: a correctness gap in the deterministic core, and a real
+      non-destructiveness bug in `apps/cli`'s writer (see Phase 5's entry below for the
+      latter). **Zero crashes** across all 10, including 350+-package monorepos
+      (medusa), each analyzed in well under 200ms.
+      - Correctness gap: `mergeCategorical` reported `framework.frontend` as `unknown`
+        on both cal.com and SvelteKit's own repo, even though each has one obvious,
+        overwhelming answer (`nextjs`/`sveltekit`) — because one or two packages in
+        each large monorepo depend only on the *base* library (`react`/`svelte`
+        directly) rather than the meta-framework, and differing string values were
+        treated as pure disagreement. Fixed with a new, purely additive optional
+        `specializes` parameter on `mergeCategorical` (`{ nextjs: "react", remix:
+        "react", nuxt: "vue", sveltekit: "svelte" }`, `FRONTEND_SPECIALIZES` in
+        `framework-analyzer.ts`) — resolves to the meta-framework when every
+        disagreeing value is explained by exactly one meta/base pair, still reports
+        `unknown` when it isn't (a genuinely different framework family, or a meta
+        value alongside an unrelated base it doesn't imply). Every existing call site
+        omits the new parameter and is provably unaffected — all 103 pre-existing
+        analyzer tests passed unchanged before any new tests were added. Deliberately
+        **not** extended to `backend`: investigating trpc's and NestJS's own
+        `unknown` backend results (same dogfooding pass) found genuine, correct
+        ambiguity, not a bug — both repos really do ship multiple backend
+        integrations side by side (trpc supports both Express and Fastify adapters;
+        NestJS's own monorepo contains both `platform-express` and
+        `platform-fastify`), so there's no safe, unconditional "NestJS always implies
+        X" fact to encode the way "a Next.js app always has react" is unconditionally
+        true. 7 new tests (110 total in `packages/analyzer`). Verified for real:
+        re-cloned cal.com and SvelteKit's repo fresh, rebuilt, confirmed both now
+        report the meta-framework with a reason explaining the corroborating
+        base-library package, and confirmed trpc/nest still correctly report
+        `unknown` with the genuine multi-framework reasoning intact.
 - [x] AI-assisted analysis layer (spec §16) — closes this phase's last gap.
       `AIProvider` gained `interpretRepository(analysis: RepositoryAnalysis):
       Promise<RepositoryInsights>` (`packages/ai/src/provider.ts`), sitting
@@ -698,8 +770,123 @@ down.
       skipping an empty category) matches what's described above. No live
       `ANTHROPIC_API_KEY`-backed run was performed — same choice already
       made for Phase 4's `generateBlueprint`, offline tests only.
+- [x] Multi-language analyzer support — Python, Java, Rust, Go, Ruby, PHP, and .NET
+      added alongside Node/TypeScript, closing the single most-cited remaining gap.
+      `packages/analyzer/src/ecosystems/` gained one manifest reader per language
+      (`python.ts`/`java.ts`/`rust.ts`/`go.ts`/`ruby.ts`/`php.ts`/`dotnet.ts`), each
+      narrow and hand-written — no new TOML/XML/YAML parser dependency, matching this
+      package's existing precedent (the Prisma-schema and `pnpm-workspace.yaml`
+      regex extractors). New `read-dependency-names.ts`'s `readAllDependencyNames()`
+      unions every ecosystem's names found at a path; `FrameworkAnalyzer`/
+      `DatabaseAnalyzer`/`TestAnalyzer`/`DependencyAnalyzer` switched to it from the
+      old Node-only `readDependencyNames` — a single import-and-call-site change per
+      analyzer, since the matching/confidence/merge logic itself needed no changes at
+      all. Each analyzer's signal tables gained one block per language (backend
+      frameworks, ORMs, database drivers, auth/authz libraries); frontend-framework
+      detection deliberately stays Node/JS-only (no real equivalent concept in the
+      other ecosystems). `TestAnalyzer` gained per-language test-runner dependencies
+      and file-naming patterns (`test_*.py`, `*_test.go`, `*Test.java`, `*_spec.rb`,
+      `*Test.php`, `*Tests.cs`); Rust and Go deliberately have no test-runner
+      *dependency* signal (`cargo test`/`go test` are toolchain built-ins, not a
+      package), relying on file-pattern detection instead. 44 new tests (154 total in
+      `packages/analyzer`).
 
-## Phase 8 — Existing Project AI Layer — **mostly superseded by Phase 7's shipped `analyze`; AI-assisted interpretation now shipped too, only `CONVENTIONS.md` generation left**
+      Verified for real against real, unmodified repos in all 4 compiled/systems
+      languages of the 7 (Python, Java, Go, Rust — the four the request named
+      explicitly), not just fixtures — cloned `tiangolo/full-stack-fastapi-template`,
+      `spring-projects/spring-petclinic`, `gothinkster/golang-gin-realworld-example-app`,
+      and `launchbadge/realworld-axum-sqlx` fresh, which found and fixed four more
+      real gaps in a single pass:
+      - **Spring Boot 4's renamed starter** (`spring-boot-starter-webmvc`, replacing
+        `spring-boot-starter-web`) was completely missing from the signal table —
+        spring-petclinic reported `backend: unknown` until both names were added.
+      - **Rust's dominant testing convention** (inline `#[test]`/`#[cfg(test)]`
+        attributes within ordinary source files, not a separate test-file naming
+        convention) was entirely invisible to the file-name-only walk every other
+        language relies on — a real Rust web service with real tests reported
+        `testing.unit: false (detected)`, a confident false negative. Fixed with a
+        small, targeted content read scoped to `.rs` files only, within the same
+        bounded/exclusion-aware walk `TestAnalyzer` already uses — not a general
+        "read every file's contents" policy.
+      - **PEP 621 dependency-array truncation**: the regex used to find where a
+        `pyproject.toml`'s `dependencies = [...]` array ends broke as soon as any
+        entry contained its own brackets (Python's extras syntax, e.g.
+        `"fastapi[standard]>=0.100"` — extremely common, not an edge case), silently
+        dropping every dependency after the first bracketed one. Fixed with a small
+        hand-written bracket-depth/string-aware scanner (still not a real TOML
+        parser) instead of a single regex.
+      - **`psycopg` (v3) and `sqlmodel`** — a separate, newer package from
+        `psycopg2`/`psycopg2-binary`, and a real, distinct ORM (Pydantic + SQLAlchemy
+        combined, from FastAPI's own author) — were both missing from the Python
+        signal tables; added after the FastAPI template repo used both exclusively.
+
+      All four fixes were re-verified against the specific real repo that exposed
+      them, not just the new unit tests, after rebuilding.
+
+      Also found, and deliberately **not** fixed in this pass: the FastAPI template
+      repo's actual Python manifest lives in `backend/pyproject.toml`, undiscovered
+      because it's a `uv` workspace (`[tool.uv.workspace] members = ["backend"]`) —
+      `workspace-discovery.ts` only understood the `apps/*`/`packages/*` +
+      pnpm/npm-workspaces convention at the time, not `uv`/Poetry/Cargo/Go's own
+      workspace declarations. Confirmed this was a workspace-*discovery* gap, not a
+      Python-reader bug, by pointing `analyzeFramework`/etc. directly at `backend/`
+      and getting correct results immediately. **Since fixed** — see this
+      document's "Multi-ecosystem workspace discovery" entry below, built as a
+      direct follow-on once this specific gap was called out as pending.
+- [x] Broad real-world validation pass — 35 real, unmodified, popular (all far over
+      300 stars) open source repos, 5 per language across all 7 (Python: django,
+      flask, fastapi, django-rest-framework, celery; Java: spring-petclinic,
+      dropwizard, killbill, dubbo, javalin; Rust: axum, actix-web, sqlx, clap, tokio;
+      Go: gin, echo, fiber, caddy, cobra; Ruby: rails, sinatra, fastlane, huginn,
+      jekyll; PHP: laravel/laravel, symfony, Slim, composer, october; .NET:
+      eShopOnWeb, nopCommerce, OrchardCore, marten, eShop) — shallow-cloned fresh,
+      analyzed, cleaned up after. **Zero crashes across all 35**, including large
+      real solutions (OrchardCore's walk took 348ms, still well within budget).
+
+      Found and fixed one more systematic, high-severity real bug: `.NET`'s
+      `readDotnetDependencyNames` was repo-root-only, but **every one of the 5 real
+      .NET repos** has its actual `.csproj` files exclusively in subdirectories
+      (`src/*/`, `tests/*/`) — the dominant, near-universal real-world .NET solution
+      layout, not an edge case — so it reported nothing at all for any of them.
+      Fixed with a bounded, exclusion-aware walk (same `MAX_WALK_DEPTH` pattern
+      `TestAnalyzer`/`DirectoryAnalyzer` already use), additionally skipping
+      `bin`/`obj` build-output directories. Re-verified: went from 0/5 to 5/5 real
+      .NET repos correctly detecting `backend: aspnet`, and 4/5 also correctly
+      detecting their database/ORM. 3 new tests (156 total in `packages/analyzer`).
+
+      The other "unknown" results across the 35 are correctly explained, not bugs:
+      most of the Python/Rust/Go/Java picks above are frameworks' or tools' *own*
+      source repos (django doesn't depend on django, axum doesn't depend on axum,
+      etc.) — the same, already-validated "correctly unknown" pattern as Node's
+      `express`/`fastify` self-analysis. `django-rest-framework` has no Python
+      dependency manifest at all in its repo (an unusual, minimal packaging setup,
+      confirmed by direct inspection) — nothing to read, not a parser gap. Real
+      *consumer* apps among the 35 (spring-petclinic, huginn, laravel/laravel,
+      october, fastlane, all 5 .NET repos) consistently detected correctly.
+- [x] **Multi-ecosystem workspace discovery** — closes the gap called out above and
+      the Kill Bill (Java) case from the .NET investigation below: `workspace-
+      discovery.ts` now reads Cargo's `[workspace] members = [...]` (Rust), uv's
+      `[tool.uv.workspace] members = [...]` (Python), `go.work`'s `use` directives
+      (Go), and Maven's `<modules>` (Java) — in addition to the existing `apps/*`/
+      `packages/*` + pnpm/npm-workspaces convention. These declarations can mix
+      literal package paths and glob roots in the same list (Cargo/uv's `members`
+      commonly do); a new `WorkspaceEntries { globRoots, directPackagePaths }`
+      shape handles both, classifying each entry independently rather than
+      assuming one or the other. Also generalized the "is this a real package"
+      check from `package.json`-only to any manifest this package's ecosystem
+      readers recognize — without this, a discovered Python/Rust/Go/Java
+      subpackage would be found by the new declaration readers and then
+      immediately rejected again by the old check, silently undoing the whole
+      point. 7 new tests (172 total in `packages/analyzer`). Verified for real:
+      re-cloned the exact two real repos that exposed this gap
+      (`tiangolo/full-stack-fastapi-template`, `killbill/killbill`) fresh,
+      rebuilt, and confirmed `discoverWorkspacePackages` now finds `backend/`
+      (uv) and all 16 real Maven modules (Kill Bill) — and that
+      `analyzeRepository()` on the FastAPI template now correctly reports
+      `backend: fastapi`, `database: postgresql`, `orm: sqlmodel`, all
+      previously `unknown`.
+
+## Phase 8 — Existing Project AI Layer — **done**
 
 Originally scoped as: generate `AGENTS.md`, `PROJECT.md`, `ARCHITECTURE.md`,
 `CONVENTIONS.md`, `skills/`, agent-specific config around an existing repo, preserving
@@ -708,20 +895,36 @@ existing source, idempotent on repeat runs. By the time Phase 7 shipped `analyze
 `AgentAdapter` pipeline `init` uses → non-destructive write), most of this was
 delivered there instead: `AGENTS.md`/`PROJECT.md`/`ARCHITECTURE.md`/`skills/`/agent
 config are all generated for existing projects today, application source is proven
-byte-for-byte preserved (dogfooded three times against real repos), and re-running is
-handled correctly (`analyze` refuses on an already-adopted directory and points to
-`sync`, which is the actual idempotent-regeneration path). The AI-assisted
-interpretation layer, this phase's other original item, is also done now — see Phase
-7's last checkbox (`AIProvider.interpretRepository`); it isn't tracked twice. What's
-genuinely still missing: **`CONVENTIONS.md` is not generated by anything** (no
-generator function exists for it). The AI-assisted insights layer is a natural future
-*source* for that file's content (undocumented conventions/inconsistencies map
-directly), but that wiring — taking `RepositoryInsights` and turning it into a real,
-persisted, golden-testable file rather than a console-only report — is deliberately
-not built yet; it would need its own design pass (does it go through the Blueprint,
-like `features` does, or get written directly as informational prose outside the
-deterministic-generator/golden-test guarantee ADR 0004 requires for everything else in
-`packages/generators`? Genuinely undecided, not an oversight).
+byte-for-byte preserved (dogfooded four times against real repos, including a 10-repo
+sweep), and re-running is handled correctly (`analyze` refuses on an already-adopted
+directory and points to `sync`, which is the actual idempotent-regeneration path).
+The AI-assisted interpretation layer, this phase's other original item, is also done
+— see Phase 7's `AIProvider.interpretRepository` checkbox; it isn't tracked twice.
+
+- [x] **`CONVENTIONS.md` generation** — resolved the design question left open above
+      (Blueprint-mediated vs. direct prose): went with direct prose, deliberately
+      **not** routed through the Blueprint schema. New `apps/cli/src/
+      generate-conventions-md.ts` renders `RepositoryInsights` (the same object
+      `commands/analyze.ts` already fetches once for its own console report — no
+      second AI call) into CONVENTIONS.md; skips any empty insight category, and
+      returns `null` (not an empty file) when nothing is worth writing at all.
+      Deliberately lives in `apps/cli`, not `packages/generators` — that package's
+      ADR 0004 contract is "pure, deterministic function of a Blueprint, always
+      golden-testable", and this function's output can vary between runs against
+      an identical Blueprint (it depends on an LLM response), which would break
+      that guarantee if mixed into the same package. Only ever produced by
+      `analyze --ai` (`init` has nothing to analyze yet; `sync` is permanently
+      AI-free and could never refresh it). Written through the same
+      `applyGeneratedFiles` pipeline as every other file (so a pre-existing,
+      hand-written CONVENTIONS.md is protected by the same Rule 10 guarantee) but
+      deliberately **excluded** from `generatedPaths` in `state.json` — `sync`
+      can never regenerate AI-derived content, so tracking it as "generated" would
+      make a future sync (whose file list has no CONVENTIONS.md) treat it as stale
+      and delete it; once written, it becomes an ordinary project file. 9 new
+      tests. Verified for real: built the CLI, ran the full pipeline with a
+      realistic multi-category `RepositoryInsights` object, confirmed the actual
+      on-disk CONVENTIONS.md content and managed-region wrapping, and confirmed a
+      subsequent `sync` leaves it byte-for-byte untouched.
 
 ## Phase 9 — Sync (original meaning: local/remote Blueprint diff) — **out of scope (CLI-only pivot)**
 
@@ -736,7 +939,7 @@ involved at all, since there's no server to hold one. This phase's original mean
 Organizations, Teams, Shared Standards, Project Templates, Roles all presuppose a
 multi-user server/dashboard, which no longer exists.
 
-## Phase 11 — Drift Detection — **field-comparison slice done; import-boundary and undocumented-directory detection not started**
+## Phase 11 — Drift Detection — **done**
 
 `npx ai-zoll check`. Compare expected architecture vs. actual repository
 state; report violations (import boundary breaks, undocumented directories, testing
@@ -770,25 +973,45 @@ convention mismatches).
       stayed silent on fields with no analyzer signal (database/orm/auth),
       then fixed the stored Blueprint and confirmed a clean re-run reports "No
       drift detected" with exit code 0.
-- [ ] **Import-boundary violations** — not started, and deliberately not a smaller
-      version of the above (Rule 1: don't build placeholder functionality
-      disguised as complete). Needs real static analysis this codebase doesn't
-      have yet: parsing each file's imports, building a per-module dependency
-      graph, and defining which cross-module imports are actually disallowed
-      per `architecture.style` (layered vs. modular vs. feature-sliced have
-      different rules) — a substantial standalone feature warranting its own
-      design review before implementation, not an extension of `run-check.ts`'s
-      field-comparison approach.
-- [ ] **Undocumented-directory detection** — not started. `DirectoryAnalyzer`
-      already produces raw directory-convention signals
-      (`packages/analyzer/src/directory-analyzer.ts`), but there's no stored
-      baseline to diff against yet ("undocumented" implies comparing against
-      what *was* documented/expected, not just listing what exists). The most
-      likely shape: snapshot `directory.signals` into `.ai-zoll/state.json` at
-      `init`/`analyze`/`sync` time, then `check` diffs the fresh scan against
-      that snapshot and reports newly-appeared conventions — a real schema
-      addition to `ProjectState`, deliberately deferred rather than bundled
-      into this session's first slice.
+- [x] **Undocumented-directory detection** — `ProjectState` gained an optional
+      `directorySignals?: string[]` field (undefined for `state.json` files
+      written before this existed — read as "no baseline recorded yet", never
+      as "found nothing then", which would misreport every current signal as
+      newly-appeared). `init`/`analyze`/`sync` all snapshot
+      `analyzeDirectory(projectDir).signals.value` into it on every write —
+      refreshed on every sync, so drift is relative to the last time ai-zoll
+      looked, not repo genesis. `run-check.ts` diffs the fresh scan against
+      that baseline and reports newly-appeared conventions via a new
+      `newDirectoryConventions: string[]` field on `RunCheckResult` (a
+      genuinely different kind of finding from `DriftEntry` — a set gaining
+      members, not one expected value not matching one actual value — so it
+      isn't forced into that shape). 6 new tests. Verified for real: built the
+      CLI, adopted a scratch project, confirmed a clean `check`, added a new
+      `domain/` directory, confirmed `check` reported it, ran `sync`, and
+      confirmed the baseline refreshed so a subsequent `check` was clean again.
+- [x] **Import-boundary violations** — new `packages/analyzer/src/
+      import-boundary-analyzer.ts`, checking the one rule shared across
+      layered/clean-architecture/hexagonal/domain-driven-design styles: the
+      Dependency Rule (inner business-logic code must never import outer
+      framework/infrastructure code). Deliberately excludes "modular" — its own
+      boundary concept (feature isolation) is a genuinely different rule shape,
+      not attempted here. Node/TypeScript only — import syntax is far too
+      varied across the other 6 ecosystems this package now supports for a
+      shared parser; a narrow, hand-written regex extractor (ES `from "..."`,
+      side-effect `import "..."`, CommonJS `require(...)`), not a real AST
+      parser, matching this package's existing precedent. Returns `[]`
+      immediately (no walking) both when the style doesn't use the rule and
+      when the repo doesn't actually have both an inner- and an outer-layer
+      directory to compare — "nothing to check", not "clean pass". Scoped to
+      walking only the inner-layer directories that exist (not the whole
+      repo), since that's the only place a violation could originate. 9 new
+      tests, plus a real-repo sanity check (3ms against this repo's own
+      TypeScript source, 0 violations — correctly nothing to check at this
+      repo's root). `run-check.ts` gained `importBoundaryViolations:
+      ImportBoundaryViolation[]`. Verified for real: built the CLI, created a
+      scratch `domain/`+`infrastructure/` project with a real violation,
+      confirmed `check` reported it with exit code 1, fixed the import, and
+      confirmed a clean re-run.
 
 ## Immediate development order (spec §48)
 
@@ -805,25 +1028,53 @@ engine → 5. Generated workspace → 6. First agent adapter → 7. Mock AI prov
 adapters → 15. Blueprint versioning → 16. Sync → 17. Organization mode →
 18. Drift detection.
 
-**Next up (current, post-pivot):** everything through step 14 is effectively done —
-`init`/`sync`/`analyze` (steps 9-10, 12) are shipped and dogfooded, all four planned
-agent adapters (step 14: Claude/Cursor/Codex/Copilot) are implemented, and Blueprint
-versioning (step 15, the schema's `version` field + `safeParseBlueprint` re-validation
-on every `state.json` read) has been in place since Phase 5. Steps 11 and 17
-(Dashboard, Organization mode) are out of scope, not merely deferred — `apps/web` and
-`apps/api` were removed entirely this session. **Drift detection** (step 18, Phase 11)
-now has a real, shipped first slice (`ai-zoll check`, field-comparison against the
-stored Blueprint) — what's left there is import-boundary violations and
-undocumented-directory detection, both genuinely separate sub-features, not smaller
-versions of what shipped (see Phase 11 above). The **AI-assisted analysis layer**
-(spec §16, Phase 7/8's shared item) is also now shipped — `analyze --ai` prints
-business-domain/module/convention/inconsistency observations via
-`AIProvider.interpretRepository`. What's left there specifically is narrower than
-before: turning those insights into a real, persisted `CONVENTIONS.md` file (a
-separate design question — see Phase 8 above), not the interpretation step itself.
-Beyond that, in rough priority order: **multi-language analyzer support**
-(Node/TypeScript only today); and **future agent adapters** beyond the initial four
-(Cline, Zed — researched in `docs/decisions/0003-agent-adapter-pattern.md`, not
-built). `login`/auth (originally tied to `init <project-id>` and dashboard auth) has
-no remaining use case now that both are out of scope — left unstarted indefinitely,
-not "next."
+**Next up (current, post-pivot):** every phase in spec §48's original ordering is now
+either shipped or explicitly, deliberately out of scope. `init`/`sync`/`analyze`
+(steps 9-10, 12) are shipped and dogfooded; all six agent adapters (step 14:
+Claude/Cursor/Codex/Copilot/Cline/Zed) are implemented; Blueprint versioning (step
+15) has been in place since Phase 5; **drift detection** (step 18, Phase 11) is fully
+done, including import-boundary violations and undocumented-directory detection, not
+just the original field-comparison slice; the **AI-assisted analysis layer** (spec
+§16, Phase 7/8's shared item) is done end-to-end, through a real, persisted
+`CONVENTIONS.md` file, not just the console report; **multi-language analyzer
+support** covers all 7 target ecosystems (Python, Java, Rust, Go, Ruby, PHP, .NET)
+including each ecosystem's own workspace/monorepo convention (`uv`, Cargo, `go.work`,
+Maven), not just Node's. Steps 11 and 17 (Dashboard, Organization mode) are out of
+scope, not merely deferred — `apps/web`/`apps/api` were removed entirely earlier this
+session. `login`/auth has no remaining use case now that the dashboard and
+`init <project-id>` are both out of scope — this is a fully local, account-free tool
+by design, not a gap.
+
+**Real lint tooling and stale docs — since fixed.** Every package's `lint` script is
+now a real `biome check src`, not a placeholder echo. ESLint + `typescript-eslint` was
+tried first and rejected: this project's `typescript@^7.0.2` hits a hard, actively-
+enforced version gate inside `typescript-eslint` itself ("does not support TS 7.0",
+not a soft peer-range warning — see `typescript-eslint#10940`), so it refuses to run
+at all, not just its type-aware rules. Biome doesn't wrap the TypeScript compiler API
+the same way and has no such gate. Root `biome.json` enables the linter only (not the
+bundled formatter/import-organizer — this codebase's existing 2-space/`.editorconfig`
+style wasn't a flagged gap, and turning on a whole-repo formatter would have produced
+a huge, unrelated reformat diff). First real run surfaced genuine issues, all fixed
+rather than suppressed: an idiomatic-but-flagged `while ((match = re.exec(...)))`
+assignment-in-expression loop rewritten to avoid the assignment entirely, several
+string concatenations converted to template literals, and about a dozen
+`noUncheckedIndexedAccess`-driven non-null assertions (`arr[i]!`) either replaced with
+a genuinely safe pattern (`match?.[1] ?? null`, a type-guarded `.filter()`,
+`.charAt(i)` for an always-in-bounds loop index) or, where no clean alternative
+existed for a real, locally-proven invariant (e.g. `arr[0]!` right after checking
+`arr.length === 1`), kept as `!` with an inline `biome-ignore` comment explaining the
+invariant, rather than restructured into worse code just to satisfy the linter. Full
+workspace `build`/`typecheck`/`lint`/`test` all green after. `packages/blueprint`'s and
+`packages/generators`' READMEs (`Not yet wired to an AIProvider` / `not yet
+implemented (placeholder package)`) were stale and are now fixed; `packages/templates`'
+README/scripts were reworded from `not implemented yet` to `deliberately empty`, since
+it's genuinely unused (no code imports `@ai-zoll/templates`) by design, not an
+unstarted Phase 2 item.
+
+What's left, genuinely: **npm publish readiness** (the CLI currently depends on 6
+internal `@ai-zoll/*` workspace packages that aren't published anywhere — installing
+it outside this monorepo would crash on the first cross-package `require`; needs
+either a bundler or a multi-package publish strategy, neither decided yet), and —
+always — fresh research whenever the next agent adapter candidate is actually needed,
+since this landscape consolidates quickly and nothing beyond Cline/Zed is currently
+tracked.

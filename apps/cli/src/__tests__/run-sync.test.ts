@@ -7,7 +7,7 @@ import { getAgentAdapter } from "@ai-zoll/agents";
 import type { SupportedAgentId } from "@ai-zoll/agents";
 import { generateWorkspace } from "@ai-zoll/generators";
 import { wrapManaged, CUSTOM_ZONE_HINT } from "../managed-content";
-import { writeProjectState } from "../project-state";
+import { readProjectState, writeProjectState } from "../project-state";
 import { runSync } from "../run-sync";
 
 const baseBlueprint: ProjectBlueprint = {
@@ -51,10 +51,10 @@ function seedProject(dir: string, blueprint: ProjectBlueprint, agentId: Supporte
   for (const file of files) {
     const fullPath = path.join(dir, file.path);
     fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-    fs.writeFileSync(fullPath, wrapManaged(file.content) + CUSTOM_ZONE_HINT + "\n");
+    fs.writeFileSync(fullPath, `${wrapManaged(file.content) + CUSTOM_ZONE_HINT}\n`);
   }
 
-  writeProjectState(dir, { blueprint, generatedPaths: files.map((f) => f.path) });
+  writeProjectState(dir, { blueprint, generatedPaths: files.map((f) => f.path), directorySignals: [] });
 }
 
 function readFile(dir: string, relPath: string): string {
@@ -156,6 +156,7 @@ describe("runSync", () => {
     writeProjectState(dir, {
       blueprint: noTestingBlueprint,
       generatedPaths: readGeneratedPaths(dir),
+      directorySignals: [],
     });
 
     const result = await runSync({ projectDir: dir });
@@ -182,6 +183,83 @@ describe("runSync", () => {
     expect(result.preserved.map((p) => p.path)).toContain("CLAUDE.md");
   });
 
+  it("never writes through a symlinked ancestor directory into whatever it really points at", async () => {
+    // Found dogfooding against a real repo (cal.com) that shares AI-agent
+    // rule content across tools via symlinked directories, e.g.
+    // .cursor/rules -> ../agents/rules — a real, git-tracked directory with
+    // real, hand-written content unrelated to ai-zoll. Writing into
+    // .cursor/rules/project.mdc without checking whether .cursor/rules
+    // itself is a symlink silently follows it and pollutes that real
+    // directory instead.
+    const dir = makeTempDir();
+    seedProject(dir, baseBlueprint, "claude");
+
+    const realRulesDir = path.join(dir, "agents", "rules");
+    fs.mkdirSync(realRulesDir, { recursive: true });
+    fs.writeFileSync(path.join(realRulesDir, "existing-rule.md"), "hand-written, unrelated to ai-zoll");
+    fs.mkdirSync(path.join(dir, ".cursor"), { recursive: true });
+    fs.symlinkSync(realRulesDir, path.join(dir, ".cursor", "rules"));
+
+    const result = await runSync({ projectDir: dir, agentId: "cursor" });
+
+    expect(fs.readdirSync(realRulesDir)).toEqual(["existing-rule.md"]);
+    expect(fs.readFileSync(path.join(realRulesDir, "existing-rule.md"), "utf-8")).toBe(
+      "hand-written, unrelated to ai-zoll",
+    );
+    expect(result.preserved).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: ".cursor/rules/project.mdc",
+          reason: expect.stringContaining("symlink"),
+        }),
+      ]),
+    );
+    expect(result.created).not.toContain(".cursor/rules/project.mdc");
+  });
+
+  it("never deletes a stale file reached through a symlinked ancestor directory", async () => {
+    const dir = makeTempDir();
+    seedProject(dir, baseBlueprint, "claude");
+
+    // Simulate .claude/skills already being a symlink to a real directory
+    // that happens to contain a file at the exact path a prior ai-zoll run
+    // generated (claude/skills/testing/SKILL.md) — reconcileOrphans must not
+    // delete it just because it matches a stale generated path.
+    const realSkillsDir = path.join(dir, "agents", "skills", "testing");
+    fs.mkdirSync(realSkillsDir, { recursive: true });
+    fs.writeFileSync(path.join(realSkillsDir, "SKILL.md"), "hand-written, unrelated to ai-zoll");
+    fs.rmSync(path.join(dir, ".claude", "skills"), { recursive: true, force: true });
+    fs.symlinkSync(path.join(dir, "agents", "skills"), path.join(dir, ".claude", "skills"));
+
+    const blueprintWithoutTesting: ProjectBlueprint = {
+      ...baseBlueprint,
+      testing: { unit: false, integration: false, e2e: false },
+    };
+    writeProjectState(dir, {
+      blueprint: blueprintWithoutTesting,
+      generatedPaths: [
+        ...generateWorkspace(baseBlueprint).map((f) => f.path),
+        ".claude/skills/testing/SKILL.md",
+      ],
+      directorySignals: [],
+    });
+
+    const result = await runSync({ projectDir: dir });
+
+    expect(fs.readFileSync(path.join(realSkillsDir, "SKILL.md"), "utf-8")).toBe(
+      "hand-written, unrelated to ai-zoll",
+    );
+    expect(result.deleted).not.toContain(".claude/skills/testing/SKILL.md");
+    expect(result.preserved).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: ".claude/skills/testing/SKILL.md",
+          reason: expect.stringContaining("symlink"),
+        }),
+      ]),
+    );
+  });
+
   it("preserves-with-warning rather than crashing when a directory occupies a path a generated file wants", async () => {
     const dir = makeTempDir();
     seedProject(dir, baseBlueprint, "claude");
@@ -197,6 +275,18 @@ describe("runSync", () => {
     expect(fs.lstatSync(path.join(dir, "PROJECT.md")).isDirectory()).toBe(true);
     expect(result.preserved.map((p) => p.path)).toContain("PROJECT.md");
     expect(result.created).not.toContain("PROJECT.md");
+  });
+
+  it("refreshes the directorySignals baseline on every sync, relative to the last sync, not the original one", async () => {
+    const dir = makeTempDir();
+    seedProject(dir, baseBlueprint, "claude");
+    fs.mkdirSync(path.join(dir, "src", "controllers"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "src", "controllers", ".gitkeep"), "");
+
+    await runSync({ projectDir: dir });
+    const state = readProjectState(dir);
+
+    expect(state.directorySignals).toEqual(["controllers"]);
   });
 });
 

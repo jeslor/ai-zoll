@@ -1,5 +1,5 @@
-import type { Finding } from "@ai-zoll/analyzer";
-import { analyzeRepository } from "@ai-zoll/analyzer";
+import type { Finding, ImportBoundaryViolation } from "@ai-zoll/analyzer";
+import { analyzeRepository, analyzeImportBoundaries } from "@ai-zoll/analyzer";
 import { readProjectState } from "./project-state";
 
 export interface DriftEntry {
@@ -16,6 +16,24 @@ export interface DriftEntry {
 export interface RunCheckResult {
   projectDir: string;
   drift: DriftEntry[];
+  /**
+   * Directory-convention names found now that weren't in the last recorded
+   * snapshot (spec §27's "undocumented directories" example) — a genuinely
+   * different kind of finding from `drift` (a set newly containing more
+   * things, not a single expected value not matching an actual one), so it
+   * isn't forced into `DriftEntry`'s shape. Always empty for a project
+   * whose `state.json` predates this feature (no baseline recorded yet) —
+   * never treated as "every current signal is new".
+   */
+  newDirectoryConventions: string[];
+  /**
+   * The Dependency Rule (inner business-logic code must never import outer
+   * framework/infrastructure code), checked when `blueprint.architecture.style`
+   * is one of the styles that uses it — see `analyzeImportBoundaries`.
+   * Always `[]` for "modular" (a different rule shape) or when the repo
+   * doesn't have both an inner- and outer-layer directory to compare.
+   */
+  importBoundaryViolations: ImportBoundaryViolation[];
 }
 
 function compare<T>(
@@ -45,17 +63,25 @@ function compare<T>(
  * `analyze`/`sync` already treat analyzer confidence elsewhere. Requires an
  * already-`ai-zoll`-initialized project, same precondition as `sync`.
  *
- * Deliberately out of scope for this first slice (Rule 1): import-boundary
- * violations and "undocumented directory" detection, both named in spec
- * §27's example report. Those need real static import-graph analysis and a
- * documented-vs-actual directory baseline respectively — genuinely
- * different mechanisms from this field-comparison approach, not smaller
- * versions of it. See docs/plan/03-roadmap.md Phase 11 for the follow-up.
+ * Also reports newly-appeared directory conventions since the last
+ * recorded baseline (see `newDirectoryConventions` on `RunCheckResult`) and
+ * import-boundary violations of the Dependency Rule (see
+ * `importBoundaryViolations`), when the declared architecture style uses
+ * that rule.
  */
 export function runCheck(projectDir: string): RunCheckResult {
   const state = readProjectState(projectDir);
   const analysis = analyzeRepository(projectDir);
   const { blueprint } = state;
+
+  const previousSignals = new Set(state.directorySignals ?? []);
+  const currentSignals = analysis.directory.signals.value ?? [];
+  const newDirectoryConventions =
+    state.directorySignals === undefined
+      ? []
+      : currentSignals.filter((signal) => !previousSignals.has(signal));
+
+  const importBoundaryViolations = analyzeImportBoundaries(projectDir, blueprint.architecture.style);
 
   const drift = [
     compare("stack.frontend", "Frontend", blueprint.stack.frontend, analysis.framework.frontend),
@@ -84,5 +110,5 @@ export function runCheck(projectDir: string): RunCheckResult {
     ),
   ].filter((entry): entry is DriftEntry => entry !== null);
 
-  return { projectDir, drift };
+  return { projectDir, drift, newDirectoryConventions, importBoundaryViolations };
 }
