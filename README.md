@@ -32,6 +32,10 @@ npx ai-zoll sync [agent]     # Re-sync an already-initialized project, or switch
                               # different agent — regenerates the managed content,
                               # preserving anything you've hand-written below each
                               # file's managed-region marker
+
+npx ai-zoll check            # Compare the stored Blueprint against the repo's actual
+                              # state (stack, testing, security) and report drift —
+                              # exits non-zero when drift is found, usable as a CI gate
 ```
 
 Both `init` and `analyze` are non-destructive: a file that already exists and wasn't

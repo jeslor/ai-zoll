@@ -2,6 +2,7 @@
 import { runInitCommand } from "./commands/init";
 import { runSyncCommand } from "./commands/sync";
 import { runAnalyzeCommand } from "./commands/analyze";
+import { runCheckCommand } from "./commands/check";
 
 async function main(): Promise<void> {
   const command = process.argv[2];
@@ -22,8 +23,13 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "check") {
+    runCheckCommand();
+    return;
+  }
+
   console.log(
-    "Usage: ai-zoll init [--ai]\n       ai-zoll sync [agent]\n       ai-zoll analyze [--ai]",
+    "Usage: ai-zoll init [--ai]\n       ai-zoll sync [agent]\n       ai-zoll analyze [--ai]\n       ai-zoll check",
   );
   process.exitCode = 1;
 }
