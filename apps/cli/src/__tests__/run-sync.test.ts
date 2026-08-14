@@ -7,7 +7,7 @@ import { getAgentAdapter } from "@ai-zoll/agents";
 import type { SupportedAgentId } from "@ai-zoll/agents";
 import { generateWorkspace } from "@ai-zoll/generators";
 import { wrapManaged, CUSTOM_ZONE_HINT } from "../managed-content";
-import { writeProjectState } from "../project-state";
+import { readProjectState, writeProjectState } from "../project-state";
 import { runSync } from "../run-sync";
 
 const baseBlueprint: ProjectBlueprint = {
@@ -54,7 +54,7 @@ function seedProject(dir: string, blueprint: ProjectBlueprint, agentId: Supporte
     fs.writeFileSync(fullPath, wrapManaged(file.content) + CUSTOM_ZONE_HINT + "\n");
   }
 
-  writeProjectState(dir, { blueprint, generatedPaths: files.map((f) => f.path) });
+  writeProjectState(dir, { blueprint, generatedPaths: files.map((f) => f.path), directorySignals: [] });
 }
 
 function readFile(dir: string, relPath: string): string {
@@ -156,6 +156,7 @@ describe("runSync", () => {
     writeProjectState(dir, {
       blueprint: noTestingBlueprint,
       generatedPaths: readGeneratedPaths(dir),
+      directorySignals: [],
     });
 
     const result = await runSync({ projectDir: dir });
@@ -240,6 +241,7 @@ describe("runSync", () => {
         ...generateWorkspace(baseBlueprint).map((f) => f.path),
         ".claude/skills/testing/SKILL.md",
       ],
+      directorySignals: [],
     });
 
     const result = await runSync({ projectDir: dir });
@@ -273,6 +275,18 @@ describe("runSync", () => {
     expect(fs.lstatSync(path.join(dir, "PROJECT.md")).isDirectory()).toBe(true);
     expect(result.preserved.map((p) => p.path)).toContain("PROJECT.md");
     expect(result.created).not.toContain("PROJECT.md");
+  });
+
+  it("refreshes the directorySignals baseline on every sync, relative to the last sync, not the original one", async () => {
+    const dir = makeTempDir();
+    seedProject(dir, baseBlueprint, "claude");
+    fs.mkdirSync(path.join(dir, "src", "controllers"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "src", "controllers", ".gitkeep"), "");
+
+    await runSync({ projectDir: dir });
+    const state = readProjectState(dir);
+
+    expect(state.directorySignals).toEqual(["controllers"]);
   });
 });
 

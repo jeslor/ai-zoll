@@ -34,8 +34,12 @@ function makeTempDir(): string {
   return dir;
 }
 
-function initProject(projectDir: string, blueprint: ProjectBlueprint): void {
-  writeProjectState(projectDir, { blueprint, generatedPaths: [] });
+function initProject(
+  projectDir: string,
+  blueprint: ProjectBlueprint,
+  directorySignals: string[] = [],
+): void {
+  writeProjectState(projectDir, { blueprint, generatedPaths: [], directorySignals });
 }
 
 function writePackageJson(projectDir: string, dependencies: Record<string, string>): void {
@@ -148,5 +152,83 @@ describe("runCheck", () => {
     const fields = result.drift.map((d) => d.field).sort();
     expect(fields).toContain("stack.backend");
     expect(fields).toContain("security.authentication");
+  });
+
+  it("reports newly-appeared directory conventions since the last recorded baseline", () => {
+    const projectDir = makeTempDir();
+    initProject(projectDir, baseBlueprint, ["controllers"]);
+    fs.mkdirSync(path.join(projectDir, "services"), { recursive: true });
+    fs.writeFileSync(path.join(projectDir, "services", ".gitkeep"), "");
+    fs.mkdirSync(path.join(projectDir, "controllers"), { recursive: true });
+    fs.writeFileSync(path.join(projectDir, "controllers", ".gitkeep"), "");
+
+    const result = runCheck(projectDir);
+
+    // "controllers" was already in the baseline -> not new. "services" wasn't -> new.
+    expect(result.newDirectoryConventions).toEqual(["services"]);
+  });
+
+  it("reports no new directory conventions when the current signals are a subset of the baseline", () => {
+    const projectDir = makeTempDir();
+    initProject(projectDir, baseBlueprint, ["controllers", "services"]);
+    fs.mkdirSync(path.join(projectDir, "controllers"), { recursive: true });
+    fs.writeFileSync(path.join(projectDir, "controllers", ".gitkeep"), "");
+
+    const result = runCheck(projectDir);
+
+    expect(result.newDirectoryConventions).toEqual([]);
+  });
+
+  it("never reports new directory conventions for a project whose state.json predates this feature", () => {
+    const projectDir = makeTempDir();
+    // Hand-written, no directorySignals field at all — simulates a
+    // pre-existing project adopted before this feature shipped.
+    fs.mkdirSync(path.join(projectDir, ".ai-zoll"), { recursive: true });
+    fs.writeFileSync(
+      path.join(projectDir, ".ai-zoll", "state.json"),
+      JSON.stringify({ blueprint: baseBlueprint, generatedPaths: [] }, null, 2),
+    );
+    fs.mkdirSync(path.join(projectDir, "controllers"), { recursive: true });
+    fs.writeFileSync(path.join(projectDir, "controllers", ".gitkeep"), "");
+
+    const result = runCheck(projectDir);
+
+    // Without this guard, "controllers" would be misreported as "new" just
+    // because no baseline was ever recorded — not because it's actually new.
+    expect(result.newDirectoryConventions).toEqual([]);
+  });
+
+  it("reports an import-boundary violation for a layered architecture style", () => {
+    const projectDir = makeTempDir();
+    initProject(projectDir, { ...baseBlueprint, architecture: { style: "layered" } });
+    fs.mkdirSync(path.join(projectDir, "src", "domain"), { recursive: true });
+    fs.mkdirSync(path.join(projectDir, "src", "infrastructure"), { recursive: true });
+    fs.writeFileSync(
+      path.join(projectDir, "src", "domain", "user.ts"),
+      'import { db } from "../infrastructure/db";\nexport class User {}',
+    );
+    fs.writeFileSync(path.join(projectDir, "src", "infrastructure", "db.ts"), "export const db = {};");
+
+    const result = runCheck(projectDir);
+
+    expect(result.importBoundaryViolations).toEqual([
+      { file: "domain/user.ts", importedFile: "infrastructure/db", fromLayer: "domain", toLayer: "infrastructure" },
+    ]);
+  });
+
+  it("never checks import boundaries for the modular architecture style", () => {
+    const projectDir = makeTempDir();
+    initProject(projectDir, { ...baseBlueprint, architecture: { style: "modular" } });
+    fs.mkdirSync(path.join(projectDir, "src", "domain"), { recursive: true });
+    fs.mkdirSync(path.join(projectDir, "src", "infrastructure"), { recursive: true });
+    fs.writeFileSync(
+      path.join(projectDir, "src", "domain", "user.ts"),
+      'import { db } from "../infrastructure/db";\nexport class User {}',
+    );
+    fs.writeFileSync(path.join(projectDir, "src", "infrastructure", "db.ts"), "export const db = {};");
+
+    const result = runCheck(projectDir);
+
+    expect(result.importBoundaryViolations).toEqual([]);
   });
 });

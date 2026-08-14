@@ -297,8 +297,8 @@ with Claude Code), then Cursor, then Codex. Do not implement all three at once.
       `.github/copilot-instructions.md` and `.github/instructions/
       testing.instructions.md` output.
 
-- [x] `generateRules` for all four adapters — researched each agent's actual "rules"
-      concept rather than guessing, and all four return `[]`, each for a different,
+- [x] `generateRules` for all six adapters — researched each agent's actual "rules"
+      concept rather than guessing, and all six return `[]`, each for a different,
       sourced reason: **Claude** has a real `.claude/rules/` mechanism (glob-scoped
       `.md`, added early 2026) but nothing in the current Blueprint is genuinely
       pattern-scoped convention data — the only candidate content is already
@@ -311,28 +311,47 @@ with Claude Code), then Cursor, then Codex. Do not implement all three at once.
       ([source](https://www.codegateway.dev/en/blog/openai-codex-cli-complete-guide-2026)).
       **Copilot**'s path-specific `.instructions.md` files are already its full
       "rules" mechanism, fully used by `generateSkills` — same reasoning as Cursor.
-- [x] `validate` for all four adapters — shared `validateSkillCoverage`
+      **Cline**'s `.clinerules/` (used by both `generateInstructions` and
+      `generateSkills`) is the same story again. **Zed** has no separate rules
+      concept, matching Codex's reasoning.
+- [x] `validate` for all six adapters — five of six share `validateSkillCoverage`
       (`packages/agents/src/validate-skill-coverage.ts`), checking whether every
       skill a Blueprint triggers (via `packages/generators`' `generateSkills`) has a
       frontmatter entry in *this* adapter's map — i.e., whether `generateSkills`
       would succeed without throwing, exposed as a non-throwing predicate. The check
       itself is agent-agnostic (just "is this key present"), so it's shared across
-      all four despite each adapter's map carrying different extra rendering fields
-      (e.g. Cursor's `globs`, Copilot's `applyTo`). Proven to actually catch drift:
+      Claude/Cursor/Codex/Copilot/Cline despite each adapter's map carrying different
+      extra rendering fields (e.g. Cursor's `globs`, Copilot's `applyTo`) or, for
+      Cline, no extra fields at all (plain markdown, no frontmatter — so its "map" is
+      just a membership set, `CLINE_SKILL_IDS`). Proven to actually catch drift:
       calling it with an empty frontmatter map against a real Blueprint correctly
-      reports `valid: false` with a specific issue.
-- [x] **Future adapter candidates researched and documented, not built** — spec §21
-      requires the adapter pattern to scale to agents beyond the initial four
-      without touching the Blueprint or generator core; see
-      `docs/decisions/0003-agent-adapter-pattern.md`'s "Future adapter candidates"
-      section for the full 2026 landscape survey (Cline, Zed, and why several
-      once-obvious candidates — Gemini CLI, Amazon Q, Windsurf — are no longer
-      live targets). Deliberately scoped down to research + documentation only
-      this session, not implementation (Rule 1) — each real candidate adapter is
-      its own future task.
+      reports `valid: false` with a specific issue. **Zed** is the one genuine
+      exception — its `generateSkills` always returns `[]` (see below), so
+      `validateSkillCoverage`'s premise doesn't apply; its `validate` is a bespoke,
+      always-`{valid: true}` implementation, a real structural difference documented
+      inline, not an oversight.
+- [x] **Cline and Zed adapters built** — the two "Future adapter candidates" from
+      `docs/decisions/0003-agent-adapter-pattern.md`'s prior research, now
+      implemented (see that doc for the confirmed real conventions). `ClineAdapter`:
+      `.clinerules/project.md` (instructions) + `.clinerules/<id>.md` (skills, no
+      frontmatter) — deliberately uses the directory form of `.clinerules`
+      consistently rather than mixing it with the single-file form Cline also
+      supports, so instructions and skills can coexist without fighting over the
+      same path. `ZedAdapter`: a single `.rules` file; `generateSkills` always
+      returns `[]` since Zed has no separate skill/contextual-rules mechanism at
+      all — a real, structural difference from every other adapter, not a
+      shortcut. `packages/blueprint`'s `AgentIdSchema` enum extended to include
+      both (`apps/cli`'s `promptAgent` needed zero changes, since it already
+      derives its choices from `SUPPORTED_AGENT_IDS`). 18 new tests (102 total in
+      `packages/agents`). Verified for real: built the CLI, ran `init` for both
+      agents against a scratch directory, and confirmed the actual on-disk
+      `.clinerules/project.md`, `.clinerules/testing.md`, and `.rules` output —
+      including confirming Zed correctly produces *no* agent-specific skill file
+      while still getting the canonical `skills/` directory every agent gets.
 
-All four adapters (`ClaudeAdapter`/`CursorAdapter`/`CodexAdapter`/`CopilotAdapter`)
-now implement the complete spec §21 `AgentAdapter` interface.
+All six adapters (`ClaudeAdapter`/`CursorAdapter`/`CodexAdapter`/`CopilotAdapter`/
+`ClineAdapter`/`ZedAdapter`) now implement the complete spec §21 `AgentAdapter`
+interface.
 
 ## Phase 4 — AI Blueprint Generation — **done**
 
@@ -807,14 +826,13 @@ down.
       Also found, and deliberately **not** fixed in this pass: the FastAPI template
       repo's actual Python manifest lives in `backend/pyproject.toml`, undiscovered
       because it's a `uv` workspace (`[tool.uv.workspace] members = ["backend"]`) —
-      `workspace-discovery.ts` only understands the `apps/*`/`packages/*` +
-      pnpm/npm-workspaces convention, not `uv`/Poetry/Cargo/Go's own workspace
-      declarations. Confirmed this is a workspace-*discovery* gap, not a Python-reader
-      bug, by pointing `analyzeFramework`/etc. directly at `backend/` and getting
-      correct results immediately. Documented in `packages/analyzer/README.md` as a
-      real, stated limitation — extending workspace discovery to understand each new
-      ecosystem's own monorepo convention is separate, additional scope, not a quick
-      follow-on to this task.
+      `workspace-discovery.ts` only understood the `apps/*`/`packages/*` +
+      pnpm/npm-workspaces convention at the time, not `uv`/Poetry/Cargo/Go's own
+      workspace declarations. Confirmed this was a workspace-*discovery* gap, not a
+      Python-reader bug, by pointing `analyzeFramework`/etc. directly at `backend/`
+      and getting correct results immediately. **Since fixed** — see this
+      document's "Multi-ecosystem workspace discovery" entry below, built as a
+      direct follow-on once this specific gap was called out as pending.
 - [x] Broad real-world validation pass — 35 real, unmodified, popular (all far over
       300 stars) open source repos, 5 per language across all 7 (Python: django,
       flask, fastapi, django-rest-framework, celery; Java: spring-petclinic,
@@ -845,8 +863,30 @@ down.
       confirmed by direct inspection) — nothing to read, not a parser gap. Real
       *consumer* apps among the 35 (spring-petclinic, huginn, laravel/laravel,
       october, fastlane, all 5 .NET repos) consistently detected correctly.
+- [x] **Multi-ecosystem workspace discovery** — closes the gap called out above and
+      the Kill Bill (Java) case from the .NET investigation below: `workspace-
+      discovery.ts` now reads Cargo's `[workspace] members = [...]` (Rust), uv's
+      `[tool.uv.workspace] members = [...]` (Python), `go.work`'s `use` directives
+      (Go), and Maven's `<modules>` (Java) — in addition to the existing `apps/*`/
+      `packages/*` + pnpm/npm-workspaces convention. These declarations can mix
+      literal package paths and glob roots in the same list (Cargo/uv's `members`
+      commonly do); a new `WorkspaceEntries { globRoots, directPackagePaths }`
+      shape handles both, classifying each entry independently rather than
+      assuming one or the other. Also generalized the "is this a real package"
+      check from `package.json`-only to any manifest this package's ecosystem
+      readers recognize — without this, a discovered Python/Rust/Go/Java
+      subpackage would be found by the new declaration readers and then
+      immediately rejected again by the old check, silently undoing the whole
+      point. 7 new tests (172 total in `packages/analyzer`). Verified for real:
+      re-cloned the exact two real repos that exposed this gap
+      (`tiangolo/full-stack-fastapi-template`, `killbill/killbill`) fresh,
+      rebuilt, and confirmed `discoverWorkspacePackages` now finds `backend/`
+      (uv) and all 16 real Maven modules (Kill Bill) — and that
+      `analyzeRepository()` on the FastAPI template now correctly reports
+      `backend: fastapi`, `database: postgresql`, `orm: sqlmodel`, all
+      previously `unknown`.
 
-## Phase 8 — Existing Project AI Layer — **mostly superseded by Phase 7's shipped `analyze`; AI-assisted interpretation now shipped too, only `CONVENTIONS.md` generation left**
+## Phase 8 — Existing Project AI Layer — **done**
 
 Originally scoped as: generate `AGENTS.md`, `PROJECT.md`, `ARCHITECTURE.md`,
 `CONVENTIONS.md`, `skills/`, agent-specific config around an existing repo, preserving
@@ -856,20 +896,35 @@ existing source, idempotent on repeat runs. By the time Phase 7 shipped `analyze
 delivered there instead: `AGENTS.md`/`PROJECT.md`/`ARCHITECTURE.md`/`skills/`/agent
 config are all generated for existing projects today, application source is proven
 byte-for-byte preserved (dogfooded four times against real repos, including a 10-repo
-sweep), and re-running is
-handled correctly (`analyze` refuses on an already-adopted directory and points to
-`sync`, which is the actual idempotent-regeneration path). The AI-assisted
-interpretation layer, this phase's other original item, is also done now — see Phase
-7's last checkbox (`AIProvider.interpretRepository`); it isn't tracked twice. What's
-genuinely still missing: **`CONVENTIONS.md` is not generated by anything** (no
-generator function exists for it). The AI-assisted insights layer is a natural future
-*source* for that file's content (undocumented conventions/inconsistencies map
-directly), but that wiring — taking `RepositoryInsights` and turning it into a real,
-persisted, golden-testable file rather than a console-only report — is deliberately
-not built yet; it would need its own design pass (does it go through the Blueprint,
-like `features` does, or get written directly as informational prose outside the
-deterministic-generator/golden-test guarantee ADR 0004 requires for everything else in
-`packages/generators`? Genuinely undecided, not an oversight).
+sweep), and re-running is handled correctly (`analyze` refuses on an already-adopted
+directory and points to `sync`, which is the actual idempotent-regeneration path).
+The AI-assisted interpretation layer, this phase's other original item, is also done
+— see Phase 7's `AIProvider.interpretRepository` checkbox; it isn't tracked twice.
+
+- [x] **`CONVENTIONS.md` generation** — resolved the design question left open above
+      (Blueprint-mediated vs. direct prose): went with direct prose, deliberately
+      **not** routed through the Blueprint schema. New `apps/cli/src/
+      generate-conventions-md.ts` renders `RepositoryInsights` (the same object
+      `commands/analyze.ts` already fetches once for its own console report — no
+      second AI call) into CONVENTIONS.md; skips any empty insight category, and
+      returns `null` (not an empty file) when nothing is worth writing at all.
+      Deliberately lives in `apps/cli`, not `packages/generators` — that package's
+      ADR 0004 contract is "pure, deterministic function of a Blueprint, always
+      golden-testable", and this function's output can vary between runs against
+      an identical Blueprint (it depends on an LLM response), which would break
+      that guarantee if mixed into the same package. Only ever produced by
+      `analyze --ai` (`init` has nothing to analyze yet; `sync` is permanently
+      AI-free and could never refresh it). Written through the same
+      `applyGeneratedFiles` pipeline as every other file (so a pre-existing,
+      hand-written CONVENTIONS.md is protected by the same Rule 10 guarantee) but
+      deliberately **excluded** from `generatedPaths` in `state.json` — `sync`
+      can never regenerate AI-derived content, so tracking it as "generated" would
+      make a future sync (whose file list has no CONVENTIONS.md) treat it as stale
+      and delete it; once written, it becomes an ordinary project file. 9 new
+      tests. Verified for real: built the CLI, ran the full pipeline with a
+      realistic multi-category `RepositoryInsights` object, confirmed the actual
+      on-disk CONVENTIONS.md content and managed-region wrapping, and confirmed a
+      subsequent `sync` leaves it byte-for-byte untouched.
 
 ## Phase 9 — Sync (original meaning: local/remote Blueprint diff) — **out of scope (CLI-only pivot)**
 
@@ -884,7 +939,7 @@ involved at all, since there's no server to hold one. This phase's original mean
 Organizations, Teams, Shared Standards, Project Templates, Roles all presuppose a
 multi-user server/dashboard, which no longer exists.
 
-## Phase 11 — Drift Detection — **field-comparison slice done; import-boundary and undocumented-directory detection not started**
+## Phase 11 — Drift Detection — **done**
 
 `npx ai-zoll check`. Compare expected architecture vs. actual repository
 state; report violations (import boundary breaks, undocumented directories, testing
@@ -918,25 +973,45 @@ convention mismatches).
       stayed silent on fields with no analyzer signal (database/orm/auth),
       then fixed the stored Blueprint and confirmed a clean re-run reports "No
       drift detected" with exit code 0.
-- [ ] **Import-boundary violations** — not started, and deliberately not a smaller
-      version of the above (Rule 1: don't build placeholder functionality
-      disguised as complete). Needs real static analysis this codebase doesn't
-      have yet: parsing each file's imports, building a per-module dependency
-      graph, and defining which cross-module imports are actually disallowed
-      per `architecture.style` (layered vs. modular vs. feature-sliced have
-      different rules) — a substantial standalone feature warranting its own
-      design review before implementation, not an extension of `run-check.ts`'s
-      field-comparison approach.
-- [ ] **Undocumented-directory detection** — not started. `DirectoryAnalyzer`
-      already produces raw directory-convention signals
-      (`packages/analyzer/src/directory-analyzer.ts`), but there's no stored
-      baseline to diff against yet ("undocumented" implies comparing against
-      what *was* documented/expected, not just listing what exists). The most
-      likely shape: snapshot `directory.signals` into `.ai-zoll/state.json` at
-      `init`/`analyze`/`sync` time, then `check` diffs the fresh scan against
-      that snapshot and reports newly-appeared conventions — a real schema
-      addition to `ProjectState`, deliberately deferred rather than bundled
-      into this session's first slice.
+- [x] **Undocumented-directory detection** — `ProjectState` gained an optional
+      `directorySignals?: string[]` field (undefined for `state.json` files
+      written before this existed — read as "no baseline recorded yet", never
+      as "found nothing then", which would misreport every current signal as
+      newly-appeared). `init`/`analyze`/`sync` all snapshot
+      `analyzeDirectory(projectDir).signals.value` into it on every write —
+      refreshed on every sync, so drift is relative to the last time ai-zoll
+      looked, not repo genesis. `run-check.ts` diffs the fresh scan against
+      that baseline and reports newly-appeared conventions via a new
+      `newDirectoryConventions: string[]` field on `RunCheckResult` (a
+      genuinely different kind of finding from `DriftEntry` — a set gaining
+      members, not one expected value not matching one actual value — so it
+      isn't forced into that shape). 6 new tests. Verified for real: built the
+      CLI, adopted a scratch project, confirmed a clean `check`, added a new
+      `domain/` directory, confirmed `check` reported it, ran `sync`, and
+      confirmed the baseline refreshed so a subsequent `check` was clean again.
+- [x] **Import-boundary violations** — new `packages/analyzer/src/
+      import-boundary-analyzer.ts`, checking the one rule shared across
+      layered/clean-architecture/hexagonal/domain-driven-design styles: the
+      Dependency Rule (inner business-logic code must never import outer
+      framework/infrastructure code). Deliberately excludes "modular" — its own
+      boundary concept (feature isolation) is a genuinely different rule shape,
+      not attempted here. Node/TypeScript only — import syntax is far too
+      varied across the other 6 ecosystems this package now supports for a
+      shared parser; a narrow, hand-written regex extractor (ES `from "..."`,
+      side-effect `import "..."`, CommonJS `require(...)`), not a real AST
+      parser, matching this package's existing precedent. Returns `[]`
+      immediately (no walking) both when the style doesn't use the rule and
+      when the repo doesn't actually have both an inner- and an outer-layer
+      directory to compare — "nothing to check", not "clean pass". Scoped to
+      walking only the inner-layer directories that exist (not the whole
+      repo), since that's the only place a violation could originate. 9 new
+      tests, plus a real-repo sanity check (3ms against this repo's own
+      TypeScript source, 0 violations — correctly nothing to check at this
+      repo's root). `run-check.ts` gained `importBoundaryViolations:
+      ImportBoundaryViolation[]`. Verified for real: built the CLI, created a
+      scratch `domain/`+`infrastructure/` project with a real violation,
+      confirmed `check` reported it with exit code 1, fixed the import, and
+      confirmed a clean re-run.
 
 ## Immediate development order (spec §48)
 
@@ -953,30 +1028,28 @@ engine → 5. Generated workspace → 6. First agent adapter → 7. Mock AI prov
 adapters → 15. Blueprint versioning → 16. Sync → 17. Organization mode →
 18. Drift detection.
 
-**Next up (current, post-pivot):** everything through step 14 is effectively done —
-`init`/`sync`/`analyze` (steps 9-10, 12) are shipped and dogfooded, all four planned
-agent adapters (step 14: Claude/Cursor/Codex/Copilot) are implemented, and Blueprint
-versioning (step 15, the schema's `version` field + `safeParseBlueprint` re-validation
-on every `state.json` read) has been in place since Phase 5. Steps 11 and 17
-(Dashboard, Organization mode) are out of scope, not merely deferred — `apps/web` and
-`apps/api` were removed entirely this session. **Drift detection** (step 18, Phase 11)
-now has a real, shipped first slice (`ai-zoll check`, field-comparison against the
-stored Blueprint) — what's left there is import-boundary violations and
-undocumented-directory detection, both genuinely separate sub-features, not smaller
-versions of what shipped (see Phase 11 above). The **AI-assisted analysis layer**
-(spec §16, Phase 7/8's shared item) is also now shipped — `analyze --ai` prints
-business-domain/module/convention/inconsistency observations via
-`AIProvider.interpretRepository`. What's left there specifically is narrower than
-before: turning those insights into a real, persisted `CONVENTIONS.md` file (a
-separate design question — see Phase 8 above), not the interpretation step itself.
-**Multi-language analyzer support** is also done now — Python, Java, Rust, Go, Ruby,
-PHP, and .NET added alongside Node/TypeScript, dogfooded against real repos in four
-of the seven (see Phase 7's multi-language entry). What's left there specifically:
-workspace/monorepo discovery still only understands `apps/*`/`packages/*` +
-pnpm/npm-workspaces, not each new ecosystem's own workspace convention (`uv`/Poetry,
-Cargo, `go.work`) — a real, separate, additional piece of scope, not a quick
-follow-on. Beyond that: **future agent adapters** beyond the initial
-four (Cline, Zed — researched in `docs/decisions/0003-agent-adapter-pattern.md`, not
-built). `login`/auth has no remaining use case now that the dashboard and
+**Next up (current, post-pivot):** every phase in spec §48's original ordering is now
+either shipped or explicitly, deliberately out of scope. `init`/`sync`/`analyze`
+(steps 9-10, 12) are shipped and dogfooded; all six agent adapters (step 14:
+Claude/Cursor/Codex/Copilot/Cline/Zed) are implemented; Blueprint versioning (step
+15) has been in place since Phase 5; **drift detection** (step 18, Phase 11) is fully
+done, including import-boundary violations and undocumented-directory detection, not
+just the original field-comparison slice; the **AI-assisted analysis layer** (spec
+§16, Phase 7/8's shared item) is done end-to-end, through a real, persisted
+`CONVENTIONS.md` file, not just the console report; **multi-language analyzer
+support** covers all 7 target ecosystems (Python, Java, Rust, Go, Ruby, PHP, .NET)
+including each ecosystem's own workspace/monorepo convention (`uv`, Cargo, `go.work`,
+Maven), not just Node's. Steps 11 and 17 (Dashboard, Organization mode) are out of
+scope, not merely deferred — `apps/web`/`apps/api` were removed entirely earlier this
+session. `login`/auth has no remaining use case now that the dashboard and
 `init <project-id>` are both out of scope — this is a fully local, account-free tool
 by design, not a gap.
+
+What's left, genuinely: **npm publish readiness** (the CLI currently depends on 6
+internal `@ai-zoll/*` workspace packages that aren't published anywhere — installing
+it outside this monorepo would crash on the first cross-package `require`; needs
+either a bundler or a multi-package publish strategy, neither decided yet), real lint
+tooling (every package's `lint` script is still a placeholder echo), a handful of
+stale package `README.md` files, and — always — fresh research whenever the next
+agent adapter candidate is actually needed, since this landscape consolidates
+quickly and nothing beyond Cline/Zed is currently tracked.

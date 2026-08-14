@@ -1,5 +1,6 @@
 import { runCheck } from "../run-check";
 import type { DriftEntry } from "../run-check";
+import type { ImportBoundaryViolation } from "@ai-zoll/analyzer";
 
 function printDriftEntry(entry: DriftEntry): void {
   const marker = entry.confidence === "detected" ? "⚠" : "?";
@@ -9,15 +10,23 @@ function printDriftEntry(entry: DriftEntry): void {
   );
 }
 
+function printImportBoundaryViolation(violation: ImportBoundaryViolation): void {
+  console.log(
+    `⚠ ${violation.file} (${violation.fromLayer}) imports ${violation.importedFile} (${violation.toLayer}) — inner layers must not depend on outer layers.`,
+  );
+}
+
 /**
  * Thin, non-interactive wrapper — same shape as `sync`. Exits with a
- * non-zero code when drift is found, so `ai-zoll check` is usable as a CI
- * gate, not just a human-facing report.
+ * non-zero code when drift, newly-appeared directory conventions, or
+ * import-boundary violations are found, so `ai-zoll check` is usable as a
+ * CI gate, not just a human-facing report.
  */
 export function runCheckCommand(): void {
-  const { drift } = runCheck(process.cwd());
+  const { drift, newDirectoryConventions, importBoundaryViolations } = runCheck(process.cwd());
+  const totalFindings = drift.length + newDirectoryConventions.length + importBoundaryViolations.length;
 
-  if (drift.length === 0) {
+  if (totalFindings === 0) {
     console.log("No drift detected — repository matches the stored Blueprint.");
     return;
   }
@@ -26,6 +35,14 @@ export function runCheckCommand(): void {
   for (const entry of drift) {
     printDriftEntry(entry);
   }
-  console.log(`\n${drift.length} ${drift.length === 1 ? "item" : "items"} of drift found.`);
+  for (const violation of importBoundaryViolations) {
+    printImportBoundaryViolation(violation);
+  }
+  if (newDirectoryConventions.length > 0) {
+    console.log(
+      `⚠ ${newDirectoryConventions.length} new directory convention${newDirectoryConventions.length === 1 ? "" : "s"} since the last check: ${newDirectoryConventions.join(", ")}.`,
+    );
+  }
+  console.log(`\n${totalFindings} ${totalFindings === 1 ? "item" : "items"} of drift found.`);
   process.exitCode = 1;
 }

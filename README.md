@@ -34,8 +34,10 @@ npx ai-zoll sync [agent]     # Re-sync an already-initialized project, or switch
                               # file's managed-region marker
 
 npx ai-zoll check            # Compare the stored Blueprint against the repo's actual
-                              # state (stack, testing, security) and report drift —
-                              # exits non-zero when drift is found, usable as a CI gate
+                              # state (stack, testing, security), newly-appeared
+                              # directory conventions, and import-boundary violations
+                              # of the Dependency Rule — exits non-zero when drift is
+                              # found, usable as a CI gate
 ```
 
 Both `init` and `analyze` are non-destructive: a file that already exists and wasn't
@@ -50,7 +52,7 @@ apps/
 packages/
   blueprint/    Canonical Project Blueprint: schema, types, validation (Zod)
   generators/   Deterministic template engine (blueprint -> workspace)
-  agents/       AgentAdapter implementations (claude, cursor, codex, copilot)
+  agents/       AgentAdapter implementations (claude, cursor, codex, copilot, cline, zed)
   templates/    Raw templates used by generators (currently unused, see its README)
   analyzer/     Deterministic, monorepo-aware repository analyzers
   ai/           AIProvider abstraction (MockAIProvider default, ClaudeAIProvider --ai opt-in)

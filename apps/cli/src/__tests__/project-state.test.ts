@@ -46,7 +46,11 @@ afterEach(() => {
 describe("writeProjectState / readProjectState", () => {
   it("round-trips a valid state exactly", () => {
     const dir = makeTempDir();
-    const state = { blueprint: validBlueprint, generatedPaths: ["PROJECT.md", "CLAUDE.md"] };
+    const state = {
+      blueprint: validBlueprint,
+      generatedPaths: ["PROJECT.md", "CLAUDE.md"],
+      directorySignals: ["controller", "service"],
+    };
 
     writeProjectState(dir, state);
     const result = readProjectState(dir);
@@ -56,12 +60,25 @@ describe("writeProjectState / readProjectState", () => {
 
   it("writes pretty-printed JSON with a trailing newline", () => {
     const dir = makeTempDir();
-    writeProjectState(dir, { blueprint: validBlueprint, generatedPaths: [] });
+    writeProjectState(dir, { blueprint: validBlueprint, generatedPaths: [], directorySignals: [] });
 
     const raw = fs.readFileSync(path.join(dir, ".ai-zoll", "state.json"), "utf-8");
 
     expect(raw.endsWith("\n")).toBe(true);
     expect(raw).toContain("\n  ");
+  });
+
+  it("reads directorySignals as undefined (not []) for a state.json written before this field existed", () => {
+    const dir = makeTempDir();
+    fs.mkdirSync(path.join(dir, ".ai-zoll"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, ".ai-zoll", "state.json"),
+      JSON.stringify({ blueprint: validBlueprint, generatedPaths: [] }, null, 2),
+    );
+
+    const result = readProjectState(dir);
+
+    expect(result.directorySignals).toBeUndefined();
   });
 
   it("throws a clear error when state.json doesn't exist", () => {

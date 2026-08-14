@@ -22,6 +22,9 @@ export type { DependencyAnalyzerResult } from "./dependency-analyzer";
 export { analyzeDirectory } from "./directory-analyzer";
 export type { DirectoryAnalyzerResult } from "./directory-analyzer";
 
+export { analyzeImportBoundaries } from "./import-boundary-analyzer";
+export type { ImportBoundaryViolation } from "./import-boundary-analyzer";
+
 export { analyzeRepository } from "./analyze-repository";
 export type { RepositoryAnalysis } from "./analyze-repository";
 

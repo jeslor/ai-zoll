@@ -56,12 +56,13 @@ optional `--ai` layer's job to interpret this signal set.
   (Rust), go.mod (Go), Gemfile (Ruby), composer.json (PHP), *.csproj (.NET) — see
   `packages/analyzer/src/ecosystems/`. Frontend-framework detection stays Node/JS-only
   (see `framework-analyzer.ts`'s comment on why). Workspace/monorepo discovery
-  (`workspace-discovery.ts`) is still `apps/*`/`packages/*` + pnpm/npm-workspaces only —
-  it does **not** yet understand other ecosystems' own workspace conventions (a Python
-  `uv`/Poetry monorepo's `[tool.uv.workspace] members = [...]`, a Cargo workspace's
-  `[workspace] members = [...]`, a Go workspace's `go.work`), a real, stated limitation
-  found dogfooding (see Phase 7's multi-language entry in `docs/plan/03-roadmap.md`),
-  not yet fixed.
+  (`workspace-discovery.ts`) also understands each ecosystem's own workspace
+  convention now, not just `apps/*`/`packages/*` + pnpm/npm-workspaces: Cargo's
+  `[workspace] members = [...]` (Rust), uv's `[tool.uv.workspace] members = [...]`
+  (Python), `go.work`'s `use` directives (Go), and Maven's `<modules>` (Java) —
+  found missing, then fixed, dogfooding (see Phase 7's entries in
+  `docs/plan/03-roadmap.md`). Still not understood: Poetry's own (weaker, less
+  standardized) monorepo conventions, and nested workspaces more than one level deep.
 - Every finding carries a three-tier `Confidence` (`detected`/`likely`/`unknown`), not
   a numeric score — a numeric confidence would imply precision this tool can't actually
   justify.

@@ -102,4 +102,79 @@ describe("discoverWorkspacePackages", () => {
 
     expect(discoverWorkspacePackages(dir)).toEqual([]);
   });
+
+  it("recognizes a direct package path declared in Cargo's [workspace] members (not just glob roots)", () => {
+    const dir = seed({
+      "Cargo.toml": '[workspace]\nmembers = ["core", "cli"]\n',
+      "core/Cargo.toml": '[package]\nname = "core"\n',
+      "cli/Cargo.toml": '[package]\nname = "cli"\n',
+    });
+
+    expect(discoverWorkspacePackages(dir).map((p) => p.relativePath).sort()).toEqual(["cli", "core"]);
+  });
+
+  it("recognizes a Cargo workspace mixing direct paths and a glob root in the same members array", () => {
+    const dir = seed({
+      "Cargo.toml": '[workspace]\nmembers = ["core", "crates/*"]\n',
+      "core/Cargo.toml": '[package]\nname = "core"\n',
+      "crates/utils/Cargo.toml": '[package]\nname = "utils"\n',
+    });
+
+    expect(discoverWorkspacePackages(dir).map((p) => p.relativePath).sort()).toEqual(["core", "crates/utils"]);
+  });
+
+  it("recognizes a Python uv workspace's members (a non-package.json manifest, previously undiscoverable even if declared)", () => {
+    const dir = seed({
+      "pyproject.toml": '[tool.uv.workspace]\nmembers = ["backend", "shared/*"]\n',
+      "backend/pyproject.toml": '[project]\nname = "backend"\n',
+      "shared/utils/pyproject.toml": '[project]\nname = "utils"\n',
+    });
+
+    expect(discoverWorkspacePackages(dir).map((p) => p.relativePath).sort()).toEqual([
+      "backend",
+      "shared/utils",
+    ]);
+  });
+
+  it("recognizes a Go workspace's go.work use directives (block and single-line forms)", () => {
+    const dir = seed({
+      "go.work": "go 1.21\n\nuse (\n\t./service-a\n\t./service-b\n)\n\nuse ./service-c\n",
+      "service-a/go.mod": "module acme/service-a\n",
+      "service-b/go.mod": "module acme/service-b\n",
+      "service-c/go.mod": "module acme/service-c\n",
+    });
+
+    expect(discoverWorkspacePackages(dir).map((p) => p.relativePath).sort()).toEqual([
+      "service-a",
+      "service-b",
+      "service-c",
+    ]);
+  });
+
+  it("recognizes a Maven multi-module reactor's <modules> declaration in pom.xml", () => {
+    const dir = seed({
+      "pom.xml": "<project><modules><module>api</module><module>payment</module></modules></project>",
+      "api/pom.xml": "<project></project>",
+      "payment/pom.xml": "<project></project>",
+    });
+
+    expect(discoverWorkspacePackages(dir).map((p) => p.relativePath).sort()).toEqual(["api", "payment"]);
+  });
+
+  it("recognizes a package discovered via apps/*/packages/* even when it has a non-Node manifest", () => {
+    const dir = seed({
+      "apps/api/pyproject.toml": '[project]\nname = "api"\n',
+    });
+
+    expect(discoverWorkspacePackages(dir).map((p) => p.relativePath)).toEqual(["apps/api"]);
+  });
+
+  it("degrades silently when a declared direct package path doesn't actually have a recognized manifest", () => {
+    const dir = seed({
+      "Cargo.toml": '[workspace]\nmembers = ["ghost"]\n',
+      // "ghost/" doesn't exist at all.
+    });
+
+    expect(discoverWorkspacePackages(dir)).toEqual([]);
+  });
 });
