@@ -14,7 +14,7 @@ import { defineConfig } from "tsup";
 export default defineConfig({
   entry: ["src/index.ts"],
   format: ["cjs"],
-  target: "node20",
+  target: "node24",
   platform: "node",
   noExternal: [/^@ai-zoll\//],
   external: ["zod", "@inquirer/prompts", "@anthropic-ai/sdk"],
