@@ -1071,10 +1071,50 @@ README/scripts were reworded from `not implemented yet` to `deliberately empty`,
 it's genuinely unused (no code imports `@ai-zoll/templates`) by design, not an
 unstarted Phase 2 item.
 
-What's left, genuinely: **npm publish readiness** (the CLI currently depends on 6
-internal `@ai-zoll/*` workspace packages that aren't published anywhere — installing
-it outside this monorepo would crash on the first cross-package `require`; needs
-either a bundler or a multi-package publish strategy, neither decided yet), and —
-always — fresh research whenever the next agent adapter candidate is actually needed,
-since this landscape consolidates quickly and nothing beyond Cline/Zed is currently
-tracked.
+**npm publish readiness — since fixed.** `apps/cli` is bundled with `tsup`
+(`apps/cli/tsup.config.ts`) into a single self-contained `dist/index.js`, forcing all 6
+internal `@ai-zoll/*` packages to be inlined (`noExternal: [/^@ai-zoll\//]`) while the
+3 real npm runtime dependencies (`zod`, `@inquirer/prompts`, `@anthropic-ai/sdk`) stay
+external and explicit, matching `apps/cli/package.json`'s own `dependencies` — caught
+and fixed one real gap here: tsup's default externalization only looks at the entry
+package's own `package.json`, so `@anthropic-ai/sdk` (a direct dependency of
+`packages/ai`, only transitive to `apps/cli`) was silently getting vendored into the
+bundle (774KB) until made explicit (187KB after). `apps/cli/package.json` rewritten
+for a real publish: dropped `private: true`, real starting version (`0.1.0`, since
+`0.0.0` was a placeholder), description/keywords/author/license/repository(with
+`directory: "apps/cli"`)/bugs/homepage/engines/`files: ["dist"]`, plus
+`publishConfig: { access: "public", provenance: true }` for npm's supply-chain
+provenance attestation (works out of the box on GitHub Actions via OIDC, wired into
+`.github/workflows/release.yml`'s `id-token: write` permission). The 6 internal
+packages moved from `dependencies` to `devDependencies` (needed locally for
+build/typecheck, never installed by a real consumer since npm doesn't install
+devDependencies transitively). `apps/cli/README.md` — which becomes the npm package
+page — was badly stale (described the pre-pivot dashboard+API architecture, mentioned
+a `login` command that doesn't exist) and has been rewritten to describe the real,
+current command surface; `apps/cli/LICENSE` added (npm only auto-includes a LICENSE
+file from the exact package directory, and this package lives in a monorepo
+subdirectory with no LICENSE of its own before now).
+
+**Verified for real, not just built**: `npm pack` (the exact tarball `npm publish`
+would upload) installed with plain `npm` — not `pnpm` — in a directory with zero
+access to this monorepo or its `node_modules`; the resulting `ai-zoll` binary ran
+correctly end-to-end (`check` against an uninitialized directory produced the correct
+error message; `analyze --ai` with no `ANTHROPIC_API_KEY` set failed with the correct
+"requires ANTHROPIC_API_KEY" message rather than a module-resolution crash — direct
+proof the exact code path that broke during the vendoring investigation above now
+resolves `@anthropic-ai/sdk` correctly through a real, standalone `npm install`).
+
+**Release automation**: [Changesets](https://github.com/changesets/changesets)
+(`.changeset/config.json` ignores all 7 internal package names, so only `ai-zoll` is
+ever versioned) + `.github/workflows/release.yml` (`changesets/action`) — on every
+push to `main`, pending changesets become a reviewable "Version Packages" PR; merging
+that PR triggers the actual `npm publish` (via `pnpm run release`, which rebuilds the
+bundle fresh first). Publishing is still a deliberate, reviewed action; everything
+downstream of merging that PR is automatic. Full process documented in
+`docs/RELEASING.md`, linked from `CONTRIBUTING.md`'s workflow steps. One thing this
+can't automate: an `NPM_TOKEN` repo secret, which only the repo owner can generate.
+
+What's left, genuinely: fresh research whenever the next agent adapter candidate is
+actually needed, since this landscape consolidates quickly and nothing beyond
+Cline/Zed is currently tracked. Every other phase in spec §48's original ordering is
+now shipped or explicitly, deliberately out of scope.
