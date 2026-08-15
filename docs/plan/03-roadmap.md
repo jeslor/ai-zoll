@@ -1080,9 +1080,15 @@ and fixed one real gap here: tsup's default externalization only looks at the en
 package's own `package.json`, so `@anthropic-ai/sdk` (a direct dependency of
 `packages/ai`, only transitive to `apps/cli`) was silently getting vendored into the
 bundle (774KB) until made explicit (187KB after). `apps/cli/package.json` rewritten
-for a real publish: dropped `private: true`, real starting version (`0.1.0`, since
+for a real publish: dropped `private: true`, real starting version (`1.0.0`, since
 `0.0.0` was a placeholder), description/keywords/author/license/repository(with
-`directory: "apps/cli"`)/bugs/homepage/engines/`files: ["dist"]`, plus
+`directory: "apps/cli"`)/bugs/homepage/engines/`files: ["dist"]`, plus a
+research-backed `keywords` list (cross-referenced 20 real competitor packages in the
+same AGENTS.md/AI-context-generator niche via the npm registry search API, not
+guessed — `agents.md` itself turned out to be the highest-value keyword: nearly every
+direct competitor uses it, and at only ~112 packages registry-wide it's a much
+less crowded, more precisely-targeted pool than generic terms like `cli` (100k+) or
+`ai` (66k)), plus
 `publishConfig: { access: "public", provenance: true }` for npm's supply-chain
 provenance attestation (works out of the box on GitHub Actions via OIDC, wired into
 `.github/workflows/release.yml`'s `id-token: write` permission). The 6 internal
