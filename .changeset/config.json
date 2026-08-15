@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
+  "changelog": ["@changesets/changelog-github", { "repo": "jeslor/ai-zoll" }],
+  "commit": false,
+  "fixed": [],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": [
+    "@ai-zoll/agents",
+    "@ai-zoll/ai",
+    "@ai-zoll/analyzer",
+    "@ai-zoll/blueprint",
+    "@ai-zoll/generators",
+    "@ai-zoll/shared",
+    "@ai-zoll/templates"
+  ]
+}

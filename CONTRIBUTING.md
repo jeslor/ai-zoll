@@ -25,7 +25,10 @@ sources.
 4. Run, in order: typecheck → lint → test. All three must pass.
 5. Update documentation affected by your change — including `docs/plan/03-roadmap.md`
    if you completed or started a roadmap item.
-6. Open a PR. The PR template mirrors the Definition of Done — fill it out honestly.
+6. If your change is user-facing (affects what `ai-zoll` does at runtime), add a
+   changeset: `pnpm changeset`. See [`docs/RELEASING.md`](docs/RELEASING.md) for how
+   that turns into an actual npm release.
+7. Open a PR. The PR template mirrors the Definition of Done — fill it out honestly.
 
 ## Definition of Done
 
@@ -65,6 +68,7 @@ These apply to everyone, human or AI:
 | Add a new generated file/template              | `.claude/skills/add-deterministic-generator/SKILL.md` |
 | Add a new repository analyzer                  | `.claude/skills/add-repo-analyzer/SKILL.md` |
 | Know what "done" means before opening a PR     | `.claude/skills/phase-dev-loop/SKILL.md` |
+| Understand how/when a release actually happens | `docs/RELEASING.md` |
 
 ## Commit conventions
 

@@ -13,9 +13,14 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "turbo run build --filter=ai-zoll && changeset publish"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.8"
+    "@biomejs/biome": "2.5.8",
+    "@changesets/changelog-github": "^1.0.0",
+    "@changesets/cli": "^3.0.0"
   }
 }
